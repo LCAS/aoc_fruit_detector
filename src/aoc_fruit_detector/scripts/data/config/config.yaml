@@ -1,0 +1,36 @@
+#Call program with "python -O" O=Optimize directive for non debug mode. (it is not a zero :))
+#When executed in Optimized mode, the program will neither output predicted images with bounding box/mask overlays nor it will write a respective json file. Moreover, the debug traces will not print at error event. In this mode json will be output in a variable.
+
+# UZ: After training, the newly trained model should be place in the model folder, it should be renamed to aoc_model.pth 
+
+datasets:
+  train_dataset_name: 'aoc_train_dataset'
+  test_dataset_name: 'aoc_test_dataset'
+  dataset_train_annotation_url: 'https://lncn.ac/aocanntrain' 
+  dataset_train_images_url: 'https://lncn.ac/aocdatatrain'
+  dataset_test_annotation_url: 'https://lncn.ac/aocanntest' 
+  dataset_test_images_url: 'https://lncn.ac/aocdatatest'
+files:
+  # pretrained model used as a training base model, if set as empty, the config file will use imagenet trained model as base.
+  pretrained_model_file: './model/aoc_model.pth'
+  model_file: './model/aoc_model.pth'
+  config_file: 'COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml'
+  test_metadata_catalog_file: './data/dataset_catalogs/test_metadata_catalog.pkl'
+  train_dataset_catalog_file: './data/dataset_catalogs/train_dataset_catalog.pkl'
+  train_annotation_file: './data/annotations/train/annotations.json'
+  test_annotation_file: './data/annotations/test/annotations.json'
+  model_url: 'https://lncn.ac/aocmodel'
+  meta_catalog_url: 'https://lncn.ac/aocmeta'
+  train_catalog_url: 'https://lncn.ac/aoccat'
+directories:
+  train_image_dir: './data/images/train'
+  test_image_dir: './data/images/test'
+  training_output_dir: './data/training_output/'
+  prediction_output_dir: 'data/prediction_output/test_images/'
+  prediction_json_dir: './data/annotations/predicted/' 
+training:
+  epochs: 100
+  number_of_classes: 2
+  optimizer: 'SGD'
+  learning_rate: 0.0025
+
