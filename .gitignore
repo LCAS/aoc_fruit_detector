@@ -50,3 +50,12 @@ qtcreator-*
 
 # Catkin custom files
 CATKIN_IGNORE
+
+# Detector specific files
+src/**/model/
+src/**/annotations/
+src/**/dataset_catalogs/
+src/**/images/
+src/**/output/
+
+src/**/detectron2
