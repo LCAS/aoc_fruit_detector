@@ -53,8 +53,6 @@ class AOCVisualizer(Visualizer):
             keypoints = self._convert_keypoints(keypoints)
         if labels is not None:
             assert len(labels) == num_instances
-        if assigned_colors is None:
-            assigned_colors = [[1.0,0.0,0.0],[0.0,1.0,0.0]]
         if num_instances == 0:
             return self.output
         if boxes is not None and boxes.shape[1] == 5:
@@ -76,11 +74,10 @@ class AOCVisualizer(Visualizer):
             org_labels = [labels[k] for k in sorted_idxs] if labels is not None else None
             masks = [masks[idx] for idx in sorted_idxs] if masks is not None else None
             keypoints = keypoints[sorted_idxs] if keypoints is not None else None
-
+            boxes = boxes[sorted_idxs] if boxes is not None else None
             # uz: override colors, remove boxes and labels
             assigned_colors = [[0.0, 0.0, 1.0], [0.0, 1.0, 0.0],[1.0, 0.0, 0.0]]
-            #boxes           = None
-            labels          = None
+            labels          = None #dont need labels
 
         for i in range(num_instances):
 
@@ -89,9 +86,7 @@ class AOCVisualizer(Visualizer):
             if "0 " in org_labels[i]:
                 color = assigned_colors[0]
             elif "1 " in org_labels[i]:
-                color = assigned_colors[1] #assigned_colors[2]
-            #elif ClassNames.STRAWBERRY.name.lower() in org_labels[i]:
-            #    color = assigned_colors[2]
+                color = assigned_colors[1]
             if boxes is not None:
                 self.draw_box(boxes[i], edge_color=color)
 
