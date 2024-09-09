@@ -1,5 +1,6 @@
 """
 Started by: Usman Zahidi (uz) {01/08/24}
+Updated by: Abdurrahman Yilmaz (ayilmaz@lincoln.ac.uk) {06/09/24}
 """
 # This file only serves as example to facilitate in integration process
 # Training and inference should use the config with parameters
@@ -10,10 +11,24 @@ from detectron_trainer.detectron_trainer     import DetectronTrainer
 from detectron_predictor.detectron_predictor import DetectronPredictor
 from os import listdir
 
-from utils.utils             import LearnerUtils
+from utils.utils import LearnerUtils
 
-with open('./data/config/config.yaml', 'r') as file:
-   config_data = yaml.safe_load(file)
+def find_data_folder_config(search_dir='.'):
+    for root, dirs, _ in os.walk(search_dir):
+        if 'data' in dirs:
+            data_folder = os.path.join(root, 'data')
+            config_path = os.path.join(data_folder, 'config', 'config.yaml')
+            # Check if config.yaml exists in the data/config folder
+            if os.path.exists(config_path):
+                return config_path
+    return None
+
+config_path = find_data_folder_config()
+if config_path:
+    with open(config_path, 'r') as file:
+        config_data = yaml.safe_load(file)
+else:
+    raise FileNotFoundError(f"No config file found in any 'data/config/' folder within {os.getcwd()}")
 
 name_train                  = config_data['datasets']['train_dataset_name']
 name_test                   = config_data['datasets']['test_dataset_name']
@@ -34,7 +49,7 @@ downloadUtils.call_download()
 
 rgb_files=listdir(test_image_dir)
 
-def call_predictor()->None:
+def call_predictor():
 
     # instantiation
     det_predictor = DetectronPredictor(config_data)
@@ -45,7 +60,7 @@ def call_predictor()->None:
         rgb_image   = cv2.imread(image_file_name)
 
         if rgb_image is None :
-            message = 'path to rgb is invalid or inaccessible'
+            message = 'path to rgb is invalid or inaccessible for ' + image_file_name
             logging.error(message)
 
         # ** main call **
@@ -59,21 +74,19 @@ def call_predictor()->None:
                                                                                 image_file_name)
             # Use output json_annotation_message,predicted_image as per requirement
             # In Optimized (non-debug) mode predicted_image is None
+
+            yield json_annotation_message
+
         except Exception as e:
             logging.error(e)
             print(traceback.format_exc()) if __debug__ else print(e)
 
-def call_trainer()->None:
+def call_trainer():
 
     try:
         detTrainer=DetectronTrainer(config_data)
         aoc_trainer=detTrainer.train_model(resumeType=False) # set resumeType=True when continuing training on top of parly trained models
-        detTrainer.evaluate_model(aoc_trainer.model);
+        detTrainer.evaluate_model(aoc_trainer.model)
     except Exception as e:
         logging.error(e)
         print(traceback.format_exc()) if __debug__ else print(e)
-
-if __name__ == '__main__':
-    #Call the trainer or predictor
-    #call_trainer()
-    call_predictor()
