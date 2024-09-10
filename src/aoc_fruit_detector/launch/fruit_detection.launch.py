@@ -17,7 +17,10 @@ def generate_launch_description():
 
     # Run the Python script with the -O optimization flag
     fruit_detection_node = ExecuteProcess(
-        cmd=['python3', '-O', fruit_detection_script_installed],
+        cmd=['python3', '-O', fruit_detection_script_installed,
+             '--ros-args',
+            '--remap', '/camera/image_raw:=/front_camera/image_raw'
+            ],
         output='screen'
     )
 
