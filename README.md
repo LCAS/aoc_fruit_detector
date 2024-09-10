@@ -8,8 +8,8 @@ Instance segmentation of a scene and output Mask-RCNN predictions as images and 
 
 Install following required packages or check/install required versions from requirements.txt file
 
-`python3` `torchvision` `pickle` `numpy` `opencv-python` `scikit-image` `matplotlib`
-`detectron2`
+`python3` `torchvision` `pickle` `numpy` `opencv-python` `cv-bridge` `scikit-image` `matplotlib`
+`detectron2` 
 
 ```
 pip install -r requirements. txt
