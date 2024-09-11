@@ -52,6 +52,7 @@ class FruitDetectionNode(Node):
         # Timer to call the publish_message method periodically
         #self.timer = self.create_timer(1.0, self.publish_message)
         self.count = 0
+        self.imgCount = 0
         self.process_and_publish()
 
     def find_data_folder_config(self,search_dir='.'):
@@ -68,18 +69,15 @@ class FruitDetectionNode(Node):
         try:
             # Convert ROS Image message to OpenCV image
             self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
-            prediction_json_output_file = ""
-            image_file_name = os.path.join(self.test_image_dir, 'image_from_ros.png')
 
-            json_annotation_message, _ = self.det_predictor.get_predictions(
-                self.cv_image, prediction_json_output_file, image_file_name
-            )
+            json_annotation_message, _ = self.det_predictor.get_predictions(self.cv_image)
             annotations = json_annotation_message.get('annotations', [])
             categories = json_annotation_message.get('categories', [])
 
             for annotation in annotations:
                 id = annotation.get('id', None)
-                image_id = annotation.get('image_id', self.count)
+                image_id = annotation.get('image_id', self.imgCount)
+                image_name =  f'img{str(image_id).zfill(5)}'
                 category_id = annotation.get('category_id', -1)
                 segmentation = annotation.get('segmentation', [])
                 segmentation = [point for sublist in segmentation for point in sublist]  # Flatten segmentation
@@ -107,7 +105,7 @@ class FruitDetectionNode(Node):
                 # Log and publish the message
                 self.get_logger().info(f'Publishing: id={msg.fruit_id}, type={msg.fruit_type}, variety={msg.fruit_variety}, ripeness={msg.ripeness}')
                 self.publisher_.publish(msg)
-                self.count += 1
+            self.imgCount += 1
         except CvBridgeError as e:
             self.get_logger().error(f'CvBridge Error: {e}')
         except Exception as e:
