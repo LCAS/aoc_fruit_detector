@@ -69,6 +69,15 @@ class FruitDetectionNode(Node):
         try:
             # Convert ROS Image message to OpenCV image
             self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+            
+            # Create image_name based on timestamp
+            image_name = f'img{str(msg.header.stamp.sec).zfill(10)}{str(msg.header.stamp.nanosec).zfill(9)}'
+            
+            # Create image_id as an integer using the timestamp
+            image_id = int(f'{msg.header.stamp.sec}{str(msg.header.stamp.nanosec).zfill(9)}')
+
+            self.get_logger().info(f"image_name: {image_name}")
+            self.get_logger().info(f"image_id: {image_id}")
 
             json_annotation_message, _ = self.det_predictor.get_predictions(self.cv_image)
             annotations = json_annotation_message.get('annotations', [])
@@ -76,8 +85,8 @@ class FruitDetectionNode(Node):
 
             for annotation in annotations:
                 id = annotation.get('id', None)
-                image_id = annotation.get('image_id', self.imgCount)
-                image_name =  f'img{str(image_id).zfill(5)}'
+                #image_id = annotation.get('image_id', self.imgCount)
+                #image_name =  f'img{str(image_id).zfill(5)}'
                 category_id = annotation.get('category_id', -1)
                 segmentation = annotation.get('segmentation', [])
                 segmentation = [point for sublist in segmentation for point in sublist]  # Flatten segmentation
