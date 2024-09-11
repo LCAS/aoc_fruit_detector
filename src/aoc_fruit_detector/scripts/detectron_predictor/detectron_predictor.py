@@ -81,7 +81,7 @@ class DetectronPredictor(LearnerPredictor):
             raise Exception(e)
         return data
 
-    def get_predictions(self, rgb_image,output_json_file_path,image_file_name):
+    def get_predictions(self, rgb_image,output_json_file_path='',image_file_name=''):
         predicted_image=None
         try:
             outputs = self.predictor(rgb_image)
