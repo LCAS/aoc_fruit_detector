@@ -4,6 +4,7 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String, Header
 from sensor_msgs.msg import Image
+from geometry_msgs.msg import Pose2D, Pose
 from aoc_fruit_detector.msg import FruitInfoMessage
 from predictor import call_predictor
 
@@ -111,7 +112,7 @@ class FruitDetectionNode(Node):
                     (category for category in categories if category.get('id') == category_id),
                     {'name': 'unknown', 'supercategory': 'unknown'}
                 )
-                ripeness = category_details.get('name', 'unknown')
+                ripeness_category = category_details.get('name', 'unknown')
 
                 msg = FruitInfoMessage()
                 msg.header = Header()
@@ -120,13 +121,13 @@ class FruitDetectionNode(Node):
                 msg.fruit_id = id
                 msg.fruit_type = 'Tomato'
                 msg.fruit_variety = 'Plum'
-                msg.ripeness = ripeness
+                msg.ripeness_category = ripeness_category
                 msg.bbox = bbox
-                msg.mask = segmentation
+                msg.mask2d = segmentation
                 msg.area = area
 
                 # Log and publish the message
-                self.get_logger().info(f'Publishing: id={msg.fruit_id}, type={msg.fruit_type}, variety={msg.fruit_variety}, ripeness={msg.ripeness}')
+                self.get_logger().info(f'Publishing: id={msg.fruit_id}, type={msg.fruit_type}, variety={msg.fruit_variety}, ripeness={msg.ripeness_category}')
                 self.publisher_.publish(msg)
         except CvBridgeError as e:
             self.get_logger().error(f'CvBridge Error: {e}')
