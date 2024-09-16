@@ -10,11 +10,15 @@ find_package(ament_cmake REQUIRED)
 
 find_package(std_msgs REQUIRED)
 
+find_package(geometry_msgs REQUIRED)
+
+find_package(sensor_msgs REQUIRED)
+
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/FruitInfoMessage.msg"
-  DEPENDENCIES std_msgs
+  DEPENDENCIES std_msgs geometry_msgs sensor_msgs
 )
 
 # Install Python scripts
