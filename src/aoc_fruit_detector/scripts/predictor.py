@@ -72,10 +72,14 @@ def call_predictor():
                 prediction_json_output_file = ""
 
             if (__debug__):
-                json_annotation_message,predicted_image = det_predictor.get_predictions(rgb_image, prediction_json_output_file,
-                                                                                image_file_name)
+
+                json_annotation_message, predicted_image = det_predictor.get_predictions_image(rgb_image,
+                                                                                               prediction_json_output_file,
+                                                                                               image_file_name)
             else:
-                json_annotation_message, predicted_image = det_predictor.get_predictions(rgb_image)
+                dummy_image_id = 1
+                json_annotation_message, predicted_image = det_predictor.get_predictions_message(rgb_image,
+                                                                                                 dummy_image_id)
             # Use output json_annotation_message,predicted_image as per requirement
             # In Optimized (non-debug) mode predicted_image is None
 
