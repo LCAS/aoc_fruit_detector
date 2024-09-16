@@ -19,7 +19,8 @@ def generate_launch_description():
     fruit_detection_node = ExecuteProcess(
         cmd=['python3', '-O', fruit_detection_script_installed,
              '--ros-args',
-            '--remap', '/camera/image_raw:=/front_camera/image_raw'
+            '--remap', '/camera/image_raw:=/front_camera/image_raw',
+            '--remap', '/camera/depth:=/front_camera/depth'
             ],
         output='screen'
     )
