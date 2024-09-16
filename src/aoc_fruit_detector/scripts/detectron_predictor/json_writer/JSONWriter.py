@@ -9,7 +9,6 @@ import numpy as np
 import matplotlib.figure as mplfigure
 import torch
 from matplotlib.backends.backend_agg import FigureCanvasAgg
-from PIL import Image
 from .pycococreator.pycococreatortools import pycococreatortools
 
 #detectron imports
@@ -117,14 +116,14 @@ class JSONWriter(Visualizer):
         )
         self._instance_mode = instance_mode
 
-    def create_prediction_json(self, predictions, output_json_file_path,input_file_names,categories_info):
+    def create_prediction_json(self, predictions, output_json_file_path,input_file_names,categories_info,image_size,image_id=1):
 
         image_list = list()
         category_list = list()
         dict_info=pycococreatortools.create_info()
         dict_license=pycococreatortools.create_license_info()
         dict_category={"categories":categories_info}
-        image_id=1
+
 
         # UZ: if input filename is string (only one name) then make it list
 
@@ -135,10 +134,14 @@ class JSONWriter(Visualizer):
 
         for input_file_name in input_file_names:
             head,filename = os.path.split(input_file_name)
-            image_list.append(pycococreatortools.create_image_info(image_id,filename,
+            if not __debug__:
+                image_id_string=f'{str(image_id).zfill(6)}'
+            else:
+                image_id_string = str(image_id)
+            image_list.append(pycococreatortools.create_image_info(image_id_string,filename,
             [self.output.height,self.output.width],datetime.datetime.utcnow().isoformat(' ')))
             ann_list=self._convert_instance_predictions_to_annotations(predictions, input_file_name,
-                                                           output_json_file_path,image_id)
+                                                           output_json_file_path,image_size,image_id)
             image_id += 1
         dict_images={"images": image_list}
         dict_annotations={"annotations": ann_list}
@@ -161,7 +164,7 @@ class JSONWriter(Visualizer):
 
 
     def _convert_instance_predictions_to_annotations(self, predictions,image_filename="",
-                                             json_filename="",image_id=0)->None:
+                                             json_filename="",image_size=None,image_id=0)->None:
 
         boxes = predictions.pred_boxes if predictions.has("pred_boxes") else None
         classes = predictions.pred_classes if predictions.has("pred_classes") else None
@@ -191,6 +194,7 @@ class JSONWriter(Visualizer):
             image_filename=image_filename,
             image_id = image_id,
             classes = classes,
+            image_size=image_size
         )
 
     def _overlay_instances(
@@ -204,6 +208,7 @@ class JSONWriter(Visualizer):
         image_filename="",
         image_id=0,
         classes=None,
+        image_size=None
     ):
         ann_list= list()
         num_instances = None
@@ -246,11 +251,10 @@ class JSONWriter(Visualizer):
         if masks is not None:
             index=0
             for segment in masks:
-                image = Image.open(image_filename)
                 category_info = {'id': int(classes[index]+1), 'is_crowd': '0'}
                 annotation_info = pycococreatortools.create_annotation_info(
                     self.annotation_id, image_id, category_info, segment.mask, classes[index]+1,
-                    image.size, True, 0)
+                    image_size, True, 0)
                 ann_list.append(annotation_info)
                 self.annotation_id +=1
                 index+=1

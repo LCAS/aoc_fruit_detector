@@ -74,11 +74,11 @@ class AOCVisualizer(Visualizer):
             org_labels = [labels[k] for k in sorted_idxs] if labels is not None else None
             masks = [masks[idx] for idx in sorted_idxs] if masks is not None else None
             keypoints = keypoints[sorted_idxs] if keypoints is not None else None
-            boxes = boxes[sorted_idxs] if boxes is not None else None
+            #boxes = boxes[sorted_idxs] if boxes is not None else None # use if showing bboxes
             # uz: override colors, remove boxes and labels
             assigned_colors = [[0.0, 0.0, 1.0], [0.0, 1.0, 0.0],[1.0, 0.0, 0.0]]
             labels          = None #dont need labels
-
+            boxes           = None
         for i in range(num_instances):
 
             #uz: assign colors according to label text from metadata

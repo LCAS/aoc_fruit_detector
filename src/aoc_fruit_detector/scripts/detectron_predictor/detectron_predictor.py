@@ -81,17 +81,19 @@ class DetectronPredictor(LearnerPredictor):
             raise Exception(e)
         return data
 
-    def get_predictions(self, rgb_image,output_json_file_path='',image_file_name=''):
+    def get_predictions_image(self, rgb_image,output_json_file_path='',image_file_name=''):
         predicted_image=None
+        image_size = rgb_image.shape
+        image_size = image_size[:-1]
         try:
             outputs = self.predictor(rgb_image)
-            vis_aoc = AOCVisualizer(rgb_image,
-                                   metadata=self.metadata[0],
-                                   scale=self.scale,
-                                   instance_mode=self.instance_mode
-                                   )
             predictions = outputs["instances"].to("cpu")
             if (__debug__):
+                vis_aoc = AOCVisualizer(rgb_image,
+                                        metadata=self.metadata[0],
+                                        scale=self.scale,
+                                        instance_mode=self.instance_mode
+                                        )
                 drawn_predictions = vis_aoc.draw_instance_predictions(outputs["instances"].to("cpu"))
                 predicted_image = drawn_predictions.get_image()[:, :, ::-1].copy()
                 pred_image_dir = os.path.join(self.cfg.OUTPUT_DIR, 'predicted_images')
@@ -103,11 +105,29 @@ class DetectronPredictor(LearnerPredictor):
                 print(f"predicted image saved in output folder for file {overlay_fName}")
             json_writer = JSONWriter(rgb_image, self.metadata[0])
             categories_info=self.metadata[1] # category info is saved as second list
-            predicted_json_ann=json_writer.create_prediction_json(predictions, output_json_file_path, image_file_name,categories_info)
+            predicted_json_ann=json_writer.create_prediction_json(predictions, output_json_file_path, image_file_name,categories_info,image_size)
             return predicted_json_ann,predicted_image
         except Exception as e:
             logging.error(e)
             if(__debug__): print(traceback.format_exc())
+            raise Exception(e)
+
+    def get_predictions_message(self, rgb_image, image_id=0):
+        predicted_image = None
+        output_json_file_path=''
+        image_size=rgb_image.shape
+        image_size=image_size[:-1]
+        image_file_name= f'img_{str(image_id).zfill(6)}.png'
+        try:
+            outputs = self.predictor(rgb_image)
+            predictions = outputs["instances"].to("cpu")
+            json_writer = JSONWriter(rgb_image, self.metadata[0])
+            categories_info = self.metadata[1]  # category info is saved as second list
+            predicted_json_ann = json_writer.create_prediction_json(predictions, output_json_file_path,
+                                                                    image_file_name, categories_info,image_size,image_id)
+            return predicted_json_ann, predicted_image
+        except Exception as e:
+            logging.error(e)
             raise Exception(e)
 
 

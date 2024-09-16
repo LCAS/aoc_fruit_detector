@@ -14,5 +14,9 @@ class LearnerPredictor(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_predictions(self):
+    def get_predictions_message(self):
+        pass
+
+    @abc.abstractmethod
+    def get_predictions_image(self):
         pass
