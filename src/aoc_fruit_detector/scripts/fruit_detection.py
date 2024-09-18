@@ -31,10 +31,8 @@ class FruitDetectionNode(Node):
 
                 test_image_dir              = config_data['directories']['train_image_dir']
                 prediction_json_output_dir  = config_data['directories']['prediction_json_dir']
-                self.rgb_files = [f for f in os.listdir(test_image_dir) if os.path.isfile(os.path.join(test_image_dir, f))]
                 self.test_image_dir = test_image_dir
                 self.prediction_json_output_dir = prediction_json_output_dir
-                self.rgb_files = os.listdir(test_image_dir)
 
                 # Declare parameters for min_depth and max_depth
                 self.declare_parameter('min_depth', 0.1)  # Default value
@@ -75,8 +73,35 @@ class FruitDetectionNode(Node):
                     return config_path
         return None
 
+    def compute_pose2d(self, mask):
+        """Calculate Pose2D from the mask (segmentation coordinates)."""
+        x_coords = mask[0::2]  # Every 2nd element starting from index 0 (x coordinates)
+        y_coords = mask[1::2]  # Every 2nd element starting from index 1 (y coordinates)
+        
+        pose2d = Pose2D()
+        pose2d.x = sum(x_coords) / len(x_coords)  # Calculate centroid X
+        pose2d.y = sum(y_coords) / len(y_coords)  # Calculate centroid Y
+        pose2d.theta = 0.0  # Assuming no rotation needed for pose2d
+        
+        return pose2d
+    
+    def compute_pose3d(self, pose2d):
+        pose3d = Pose()
+        pose3d.position.x = pose2d.x
+        pose3d.position.y = pose2d.y
+        pose3d.position.z = 0.0  # Assuming z = 0 for 2D
+        
+        # Identity quaternion (no rotation)
+        pose3d.orientation.x = 0.0
+        pose3d.orientation.y = 0.0
+        pose3d.orientation.z = 0.0
+        pose3d.orientation.w = 1.0  # No rotation
+    
+        return pose3d
+
     def depth_callback(self, msg):
         self.cv_depth_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='32FC1')
+        self.depth_msg = msg
 
         # To replace NaN with max_depth value
         # self.cv_depth_image[np.isnan(self.cv_depth_image)] = self.max_depth 
@@ -86,22 +111,20 @@ class FruitDetectionNode(Node):
             # Convert ROS Image message to OpenCV image
             self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
             
-            # Create image_name based on timestamp
-            image_name = f'img{str(msg.header.stamp.sec).zfill(10)}{str(msg.header.stamp.nanosec).zfill(9)}'
-            
             # Create image_id as an integer using the timestamp
             image_id = int(f'{msg.header.stamp.sec}{str(msg.header.stamp.nanosec).zfill(9)}')
 
-            #self.get_logger().info(f"image_name: {image_name}") # To print image_name
-            #self.get_logger().info(f"image_id: {image_id}") # To print image_id
-
             # Here input of det_predictor should be (cv_image, cv_depth_image, image_id)
-            json_annotation_message, _ = self.det_predictor.get_predictions(self.cv_image)
+            rgb_msg = msg                 
+            depth_msg = self.depth_msg
+            json_annotation_message, _ = self.det_predictor.get_predictions_message(self.cv_image,image_id)
             annotations = json_annotation_message.get('annotations', [])
             categories = json_annotation_message.get('categories', [])
 
             for annotation in annotations:
-                id = annotation.get('id', None)
+                #self.get_logger().info(f'Annotation: {annotation}')
+                fruit_id = annotation.get('id', None)
+                image_id = annotation.get('image_id', None)
                 category_id = annotation.get('category_id', -1)
                 segmentation = annotation.get('segmentation', [])
                 segmentation = [point for sublist in segmentation for point in sublist]  # Flatten segmentation
@@ -114,21 +137,44 @@ class FruitDetectionNode(Node):
                 )
                 ripeness_category = category_details.get('name', 'unknown')
 
-                msg = FruitInfoMessage()
-                msg.header = Header()
-                msg.header.stamp = self.get_clock().now().to_msg()
-                msg.header.frame_id = 'tomato_plant'
-                msg.fruit_id = id
-                msg.fruit_type = 'Tomato'
-                msg.fruit_variety = 'Plum'
-                msg.ripeness_category = ripeness_category
-                msg.bbox = bbox
-                msg.mask2d = segmentation
-                msg.area = area
+                fruit_msg = FruitInfoMessage()
+                fruit_msg.header = Header()
+                fruit_msg.header.stamp = self.get_clock().now().to_msg()
+                fruit_msg.header.frame_id = rgb_msg.header.frame_id
+                fruit_msg.fruit_id = fruit_id
+                fruit_msg.image_id = image_id
+                ### Fruit Biological Features ####
+                fruit_msg.pomological_class = 'Edible Plant'
+                fruit_msg.edible_plant_part = 'Culinary Vegetable'
+                fruit_msg.fruit_family = 'Solanaceae'
+                fruit_msg.fruit_species = 'Solanum lycopersicum'
+                fruit_msg.fruit_type = 'Tomato'
+                fruit_msg.fruit_variety = 'Plum'
+                fruit_msg.fruit_genotype = 'San Marzano'
+                #####################################
+                fruit_msg.fruit_quality = 'High'
+                fruit_msg.ripeness_category = ripeness_category
+                if fruit_msg.ripeness_category == 'fruit_ripe':
+                    fruit_msg.ripeness_level = 0.95
+                else:
+                    fruit_msg._ripeness_level = 0.15
+                fruit_msg.area = area
+                fruit_msg.volume = area*2
+                fruit_msg.bbox = bbox
+                fruit_msg.bvol = bbox
+                fruit_msg.mask2d = segmentation
+                fruit_msg.pose2d = self.compute_pose2d(segmentation)
+                fruit_msg.mask3d = segmentation
+                fruit_msg.pose3d = self.compute_pose3d(fruit_msg.pose2d)
+                fruit_msg.confidence = 0.93
+                fruit_msg.occlusion_level = 0.88
+
+                fruit_msg.rgb_image = rgb_msg        # Assign the current RGB image
+                fruit_msg.depth_image = depth_msg    # Assign the stored depth image
 
                 # Log and publish the message
-                self.get_logger().info(f'Publishing: id={msg.fruit_id}, type={msg.fruit_type}, variety={msg.fruit_variety}, ripeness={msg.ripeness_category}')
-                self.publisher_.publish(msg)
+                self.get_logger().info(f'Publishing: image_id={fruit_msg.image_id}, fruit_id={fruit_msg.fruit_id}, type={fruit_msg.fruit_type}, variety={fruit_msg.fruit_variety}, ripeness={fruit_msg.ripeness_category}')
+                self.publisher_.publish(fruit_msg)
         except CvBridgeError as e:
             self.get_logger().error(f'CvBridge Error: {e}')
         except Exception as e:
