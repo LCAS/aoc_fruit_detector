@@ -42,10 +42,11 @@ class DetectronTrainer(LearnerTrainer):
         # UZ:directories
         self.test_image_dir             = config_data['directories']['test_image_dir']
         self.train_image_dir            = config_data['directories']['train_image_dir']
+        self.download_assets            = config_data['settings']['download_assets']
 
-
-        downloadUtils=LearnerUtils(config_data)
-        downloadUtils.call_download()
+        if (self.download_assets):
+            downloadUtils = LearnerUtils(config_data)
+            downloadUtils.call_download()
 
         self.cfg = self._configure(self.epochs,self.learning_rate)
         self._register_train_dataset()

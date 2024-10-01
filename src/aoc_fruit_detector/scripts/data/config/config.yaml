@@ -12,25 +12,28 @@ datasets:
   dataset_test_images_url: 'https://lncn.ac/aocdatatest'
 files:
   # pretrained model used as a training base model, if set as empty, the config file will use imagenet trained model as base.
-  pretrained_model_file: './src/aoc_fruit_detector/scripts/model/aoc_model.pth'
-  model_file: './src/aoc_fruit_detector/scripts/model/aoc_model.pth'
+  pretrained_model_file: ''
+  model_file: './model/aoc_tomato_ripeness_151_40k.pth'
   config_file: 'COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml'
-  test_metadata_catalog_file: './src/aoc_fruit_detector/scripts/data/dataset_catalogs/test_metadata_catalog.pkl'
-  train_dataset_catalog_file: './src/aoc_fruit_detector/scripts/data/dataset_catalogs/train_dataset_catalog.pkl'
-  train_annotation_file: './src/aoc_fruit_detector/scripts/data/annotations/train/annotations.json'
-  test_annotation_file: './src/aoc_fruit_detector/scripts/data/annotations/test/annotations.json'
+  test_metadata_catalog_file: './data/dataset_catalogs/tom_test_metadata_catalog.pkl'
+  train_dataset_catalog_file: './data/dataset_catalogs/tom_train_dataset_catalog.pkl'
+  train_annotation_file: './data/tomato_dataset/train/annotations/ripeness_class_annotations.json'
+  test_annotation_file: './data/tomato_dataset/test/annotations/ripeness_class_annotations.json'
   model_url: 'https://lncn.ac/aocmodel'
   meta_catalog_url: 'https://lncn.ac/aocmeta'
   train_catalog_url: 'https://lncn.ac/aoccat'
 directories:
-  train_image_dir: './src/aoc_fruit_detector/scripts/data/images/train'
-  test_image_dir: './src/aoc_fruit_detector/scripts/data/images/test'
-  training_output_dir: './src/aoc_fruit_detector/scripts/data/training_output/'
-  prediction_output_dir: 'src/aoc_fruit_detector/scripts/data/prediction_output/test_images/'
-  prediction_json_dir: './src/aoc_fruit_detector/scripts/data/annotations/predicted/' 
+  train_image_dir: './data/tomato_dataset/train'
+  test_image_dir: './data/tomato_dataset/test/'
+  training_output_dir: './data/training_output/'
+  prediction_output_dir: 'data/prediction_output/test_images/'
+  prediction_json_dir: './data/annotations/predicted/' 
 training:
-  epochs: 100
+  epochs: 40000
   number_of_classes: 2
   optimizer: 'SGD'
   learning_rate: 0.0025
+settings:
+  download_assets: false # if assets such as model and datasets should be downloaded
+  rename_pred_images: false #rename the predicted images in img_000001.png like format
 

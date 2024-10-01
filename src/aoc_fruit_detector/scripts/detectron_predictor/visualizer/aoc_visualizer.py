@@ -14,9 +14,13 @@ _SMALL_OBJECT_AREA_THRESH = 1000
 
 class AOCVisualizer(Visualizer):
 
-    def __init__(self, img_rgb, metadata=None, scale=1.0, instance_mode=ColorMode.SEGMENTATION):
+    def __init__(self, img_rgb, metadata=None, scale=1.0, instance_mode=ColorMode.SEGMENTATION,colours=None,category_ids=None,masks=None):
         super(AOCVisualizer,self).__init__(img_rgb, metadata, scale, instance_mode)
 
+        self.category_ids = category_ids
+        self.colours = colours
+        if masks:
+            self.alpha = 1.0
 
     def overlay_instances(
         self,
@@ -34,6 +38,8 @@ class AOCVisualizer(Visualizer):
         Returns:
             output (VisImage): image object with visualizations.
         """
+
+
 
         num_instances = None
         if boxes is not None:
@@ -76,17 +82,17 @@ class AOCVisualizer(Visualizer):
             keypoints = keypoints[sorted_idxs] if keypoints is not None else None
             #boxes = boxes[sorted_idxs] if boxes is not None else None # use if showing bboxes
             # uz: override colors, remove boxes and labels
-            assigned_colors = [[0.0, 0.0, 1.0], [0.0, 1.0, 0.0],[1.0, 0.0, 0.0]]
+            assigned_colors = self.colours/255
             labels          = None #dont need labels
             boxes           = None
         for i in range(num_instances):
 
             #uz: assign colors according to label text from metadata
 
-            if "0 " in org_labels[i]:
-                color = assigned_colors[0]
-            elif "1 " in org_labels[i]:
-                color = assigned_colors[1]
+            for colour, cat_id in zip(self.colours, self.category_ids):
+                if str(cat_id) in org_labels[i]:
+                    color = colour[::-1]/255
+            org_labels[i] = org_labels[i][2::]
             if boxes is not None:
                 self.draw_box(boxes[i], edge_color=color)
 
@@ -160,16 +166,15 @@ class AOCVisualizer(Visualizer):
             output (VisImage): image object with polygon drawn.
         """
         # uz: change alpha to 1 for creating masks
-        alpha = 0.1
+
         edge_color = color
         polygon = mpl.patches.Polygon(
             segment,
             fill=True,
-            facecolor=mplc.to_rgb(color) + (alpha,),
+            facecolor=mplc.to_rgb(color) + (self.alpha,),
             edgecolor=edge_color,
             linewidth=max(self._default_font_size // 15 * self.output.scale, 1),
         )
         self.output.ax.add_patch(polygon)
         return self.output
-
 
