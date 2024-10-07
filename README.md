@@ -12,7 +12,7 @@ Install following required packages or check/install required versions from requ
 `detectron2` 
 
 ```
-pip install -r requirements. txt
+pip install -r requirements.txt
 ```
 Clone Detectron2 package from GitHub and install the package into your workspace.
 

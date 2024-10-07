@@ -25,9 +25,9 @@ cryptography==3.4.8
 cycler==0.11.0
 Cython==3.0.11
 dbus-python==1.2.18
-defer==1.0.6
+defer==1.0.4
 distro==1.7.0
-distro-info==1.1+ubuntu0.2
+#distro-info==1.1+ubuntu0.2
 docutils==0.20.1
 #duplicity==0.8.22 #0.8.21
 fasteners==0.14.1
@@ -172,8 +172,8 @@ tqdm==4.66.4
 triton==2.0.0
 typing_extensions==4.5.0
 tzdata==2023.3
-ubuntu-drivers-common==0.0.0
-ubuntu-pro-client==8001
+#ubuntu-drivers-common==0.0.0
+#ubuntu-pro-client==8001
 # ufw==0.36.1 # sudo apt install ufw
 # unattended-upgrades==0.1 # sudo apt install unattended-upgrades
 urllib3==1.26.14
