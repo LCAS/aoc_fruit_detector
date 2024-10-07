@@ -79,7 +79,7 @@ def create_image_info(image_id, file_name, image_size,
 
     return image_info
 
-def create_info(description="Exported from Darwin", url="https://www.lincoln.ac.uk/home/liat/", version="1.0", year=2021,
+def create_info(description="Exported from AOC_Json_Exporter", url="https://www.lincoln.ac.uk/home/liat/", version="1.0", year=2021,
                            contributor="Lincoln Institute of Agri-food Technology", date_created=datetime.datetime.utcnow().isoformat(' ')):
 
     info = {"info":{
@@ -143,3 +143,11 @@ def create_annotation_info(annotation_id, image_id, category_info, binary_mask,c
     "num_keypoints":1}
 
     return annotation_info
+
+def create_confidence_info(annotation_id, image_id, category_info,confidence_score):
+
+    confidence_info = {"annotation_id": annotation_id,
+    "image_id": image_id,
+    "category_id": category_info["id"],
+    "confidence": confidence_score}
+    return confidence_info

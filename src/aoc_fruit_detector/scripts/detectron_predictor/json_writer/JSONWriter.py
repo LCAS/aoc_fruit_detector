@@ -21,6 +21,12 @@ import datetime
 logger = logging.getLogger(__name__)
 __all__ = ["ColorMode", "VisImage", "Visualizer"]
 
+_SMALL_OBJECT_AREA_THRESH = 1000
+_LARGE_MASK_AREA_THRESH = 120000
+_OFF_WHITE = (1.0, 1.0, 240.0 / 255)
+_BLACK = (0, 0, 0)
+_RED = (1.0, 0, 0)
+
 class VisImage:
     def __init__(self, img, scale=1.0):
         """
@@ -138,15 +144,16 @@ class JSONWriter(Visualizer):
                 image_id_string=f'{str(image_id).zfill(6)}'
             else:
                 image_id_string = str(image_id)
-            image_list.append(pycococreatortools.create_image_info(image_id_string,filename,
+            image_list.append(pycococreatortools.create_image_info(image_id,filename,
             [self.output.height,self.output.width],datetime.datetime.utcnow().isoformat(' ')))
-            ann_list=self._convert_instance_predictions_to_annotations(predictions, input_file_name,
+            ann_list,conf_list=self._convert_instance_predictions_to_annotations(predictions, input_file_name,
                                                            output_json_file_path,image_size,image_id)
             image_id += 1
         dict_images={"images": image_list}
         dict_annotations={"annotations": ann_list}
+        dict_confidence = {"confidence": conf_list}
         
-        json_output_dict = {**dict_info, **dict_license, **dict_images,**dict_annotations,**dict_category}
+        json_output_dict = {**dict_info, **dict_license, **dict_images,**dict_annotations,**dict_confidence,**dict_category}
         # UZ: call self._write_to_file for dumping to file
         if(__debug__):
             self._write_to_file(output_json_file_path, json_output_dict)
@@ -168,7 +175,8 @@ class JSONWriter(Visualizer):
 
         boxes = predictions.pred_boxes if predictions.has("pred_boxes") else None
         classes = predictions.pred_classes if predictions.has("pred_classes") else None
-        labels      =None
+        labels = predictions.scores if predictions.has("scores") else None
+        #labels      =None
         keypoints   =None
         if predictions.has("pred_masks"):
             masks = np.asarray(predictions.pred_masks)
@@ -211,6 +219,7 @@ class JSONWriter(Visualizer):
         image_size=None
     ):
         ann_list= list()
+        conf_list=list()
         num_instances = None
         if boxes is not None:
             boxes = self._convert_boxes(boxes)
@@ -246,16 +255,22 @@ class JSONWriter(Visualizer):
             labels = [labels[k] for k in sorted_idxs] if labels is not None else None
             masks = [masks[idx] for idx in sorted_idxs] if masks is not None else None
             assigned_colors = [assigned_colors[idx] for idx in sorted_idxs]
+            labels=np.char.mod('%.2f',np.round(np.asarray(labels),2))
 
 
         if masks is not None:
             index=0
-            for segment in masks:
+            for segment,label in zip(masks,labels):
                 category_info = {'id': int(classes[index]+1), 'is_crowd': '0'}
                 annotation_info = pycococreatortools.create_annotation_info(
                     self.annotation_id, image_id, category_info, segment.mask, classes[index]+1,
                     image_size, True, 0)
+                confidence_info = pycococreatortools.create_confidence_info(
+                    self.annotation_id, image_id, category_info,label)
+
+
                 ann_list.append(annotation_info)
+                conf_list.append(confidence_info)
                 self.annotation_id +=1
                 index+=1
 
@@ -285,7 +300,7 @@ class JSONWriter(Visualizer):
                 # for small objects, draw text at the side to avoid occlusion
                 instance_area = (y1 - y0) * (x1 - x0)
                 if (
-                    instance_area < super._SMALL_OBJECT_AREA_THRESH * self.output.scale
+                    instance_area < _SMALL_OBJECT_AREA_THRESH * self.output.scale
                     or y1 - y0 < 40 * self.output.scale
                 ):
                     if y1 >= self.output.height - 5:
@@ -307,4 +322,4 @@ class JSONWriter(Visualizer):
                     horizontal_alignment=horiz_align,
                     font_size=font_size,
                 )
-        return ann_list
+        return ann_list,conf_list
