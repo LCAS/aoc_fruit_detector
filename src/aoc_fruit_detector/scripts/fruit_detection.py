@@ -100,24 +100,45 @@ class FruitDetectionNode(Node):
         return pose3d
 
     def depth_callback(self, msg):
-        self.cv_depth_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='32FC1')
-        self.depth_msg = msg
-
-        # To replace NaN with max_depth value
-        # self.cv_depth_image[np.isnan(self.cv_depth_image)] = self.max_depth 
+        try:
+            # Convert ROS2 depth Image message to OpenCV depth image
+            self.cv_depth_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='32FC1')
+            self.depth_msg = msg
+            # To replace NaN with max_depth value
+            # self.cv_depth_image[np.isnan(self.cv_depth_image)] = self.max_depth 
+        except Exception as e:
+            self.get_logger().error(f"Error processing depth image: {e}")
     
     def image_callback(self, msg):
         try:
             # Convert ROS Image message to OpenCV image
             self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+            self.get_logger().info("RGB ready.")
             
             # Create image_id as an integer using the timestamp
             image_id = int(f'{msg.header.stamp.sec}{str(msg.header.stamp.nanosec).zfill(9)}')
+            self.get_logger().info("image ID is: ", image_id)
 
-            # Here input of det_predictor should be (cv_image, cv_depth_image, image_id)
             rgb_msg = msg                 
             depth_msg = self.depth_msg
-            json_annotation_message, _ = self.det_predictor.get_predictions_message(self.cv_image,image_id)
+
+            if self.cv_depth_image is not None:
+                # Ensure that the depth image is the same size as the RGB image
+                if self.cv_image.shape[:2] != self.cv_depth_image.shape[:2]:
+                    self.get_logger().warn("Resizing depth image to match RGB image dimensions.")
+                    depth_image = cv2.resize(self.cv_depth_image, (self.cv_image.shape[1], self.cv_image.shape[0]))
+                else:
+                    depth_image = self.cv_depth_image
+            else:
+                # If no depth image is available, use the R channel of the RGB image as a substitute
+                self.get_logger().warn("No depth image available. Using R channel of RGB as depth substitute.")
+                depth_image = self.cv_image[:, :, 2].astype(np.float32)  # Using the R channel
+            self.get_logger().info("Depth ready")
+            # Combine RGB and depth into a single 4-channel image (3 for RGB + 1 for depth)
+            rgbd_image = np.dstack((self.cv_image, depth_image))
+            self.get_logger().info("RGBD ready")
+            
+            json_annotation_message, _, depth_mask = self.det_predictor.get_predictions_message(rgbd_image,image_id)
             annotations = json_annotation_message.get('annotations', [])
             categories = json_annotation_message.get('categories', [])
 
@@ -174,6 +195,7 @@ class FruitDetectionNode(Node):
 
                 # Log and publish the message
                 self.get_logger().info(f'Publishing: image_id={fruit_msg.image_id}, fruit_id={fruit_msg.fruit_id}, type={fruit_msg.fruit_type}, variety={fruit_msg.fruit_variety}, ripeness={fruit_msg.ripeness_category}')
+                self.get_logger().info(f'Publishing pose of fruit: {fruit_msg.pose2d}')
                 self.publisher_.publish(fruit_msg)
         except CvBridgeError as e:
             self.get_logger().error(f'CvBridge Error: {e}')
