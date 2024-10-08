@@ -26,6 +26,12 @@ python -m pip install -e detectron2
 Run package to publish annotations detected by aoc_fruit_detector package 
 
 ```bash
-ros2 launch aoc_fruit_detector fruit_detection.launch.py 
+ros2 launch aoc_fruit_detector fruit_detection.launch.py
+```
+
+If there is no depth channel, use a dummy depth value 
+
+```bash
+ros2 launch aoc_fruit_detector fruit_detection.launch.py constant_depth_value:=0.5
 ```
 
