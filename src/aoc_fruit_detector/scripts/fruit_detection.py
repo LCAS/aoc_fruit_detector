@@ -49,6 +49,9 @@ class FruitDetectionNode(Node):
             depth=10
         )
 
+        self.declare_parameter('constant_depth_value', 1.0)  # Default depth value is 1.0
+        self.constant_depth_value = self.get_parameter('constant_depth_value').value
+
         self.image_sub = self.create_subscription(
             Image,
             'camera/image_raw',
@@ -85,11 +88,27 @@ class FruitDetectionNode(Node):
         
         return pose2d
     
-    def compute_pose3d(self, pose2d):
+    def compute_pose3d(self, pose2d, depth_mask):
         pose3d = Pose()
         pose3d.position.x = pose2d.x
         pose3d.position.y = pose2d.y
-        pose3d.position.z = 0.0  # Assuming z = 0 for 2D
+
+        height, width, _ = depth_mask.shape
+        x = int(pose2d.x)
+        y = int(pose2d.y)
+
+        if 0 <= x < width and 0 <= y < height:
+            depth_values_at_pose = depth_mask[x, y, :]
+            non_zero_depth_values = depth_values_at_pose[depth_values_at_pose > 0]
+
+            if non_zero_depth_values.size > 0:
+                nearest_depth_value = np.min(non_zero_depth_values)
+            else:
+                nearest_depth_value = 0.0 
+        else:
+            nearest_depth_value = 0.0
+        
+        pose3d.position.z = nearest_depth_value
         
         # Identity quaternion (no rotation)
         pose3d.orientation.x = 0.0
@@ -117,12 +136,15 @@ class FruitDetectionNode(Node):
             
             # Create image_id as an integer using the timestamp
             image_id = int(f'{msg.header.stamp.sec}{str(msg.header.stamp.nanosec).zfill(9)}')
-            self.get_logger().info("image ID is: ", image_id)
+            self.get_logger().info(f"Image ID is: {image_id}")
 
             rgb_msg = msg                 
-            depth_msg = self.depth_msg
+            if hasattr(self, 'depth_msg') and self.depth_msg is not None:
+                depth_msg = self.depth_msg
+            else:
+                depth_msg = Image()
 
-            if self.cv_depth_image is not None:
+            if hasattr(self, 'cv_depth_image') and self.cv_depth_image is not None:
                 # Ensure that the depth image is the same size as the RGB image
                 if self.cv_image.shape[:2] != self.cv_depth_image.shape[:2]:
                     self.get_logger().warn("Resizing depth image to match RGB image dimensions.")
@@ -130,9 +152,10 @@ class FruitDetectionNode(Node):
                 else:
                     depth_image = self.cv_depth_image
             else:
-                # If no depth image is available, use the R channel of the RGB image as a substitute
-                self.get_logger().warn("No depth image available. Using R channel of RGB as depth substitute.")
-                depth_image = self.cv_image[:, :, 2].astype(np.float32)  # Using the R channel
+                # If no depth image is available, use the constant depth value
+                self.get_logger().warn(f"No depth image available. Using constant depth value: {self.constant_depth_value}")
+                depth_image = np.full(self.cv_image.shape[:2], self.constant_depth_value, dtype=np.float32)
+
             self.get_logger().info("Depth ready")
             # Combine RGB and depth into a single 4-channel image (3 for RGB + 1 for depth)
             rgbd_image = np.dstack((self.cv_image, depth_image))
@@ -141,6 +164,19 @@ class FruitDetectionNode(Node):
             json_annotation_message, _, depth_mask = self.det_predictor.get_predictions_message(rgbd_image,image_id)
             annotations = json_annotation_message.get('annotations', [])
             categories = json_annotation_message.get('categories', [])
+
+            '''if isinstance(annotations, list) and len(annotations) > 0:
+                self.get_logger().info("Keys of annotations:")
+                for idx, annotation in enumerate(annotations):
+                    if isinstance(annotation, dict):  # Ensure that the annotation is a dictionary
+                        keys = annotation.keys()  # Get keys of the current annotation
+                        self.get_logger().info(f"Annotation {idx} keys: {list(keys)}")  # Convert keys to a list for logging
+                    else:
+                        self.get_logger().warn(f"Annotation {idx} is not a dictionary: {annotation}")
+            else:
+                self.get_logger().info("No annotations found.")'''
+
+            self.get_logger().info(f"depth_mask.shape: {depth_mask.shape}")
 
             for annotation in annotations:
                 #self.get_logger().info(f'Annotation: {annotation}')
@@ -186,7 +222,7 @@ class FruitDetectionNode(Node):
                 fruit_msg.mask2d = segmentation
                 fruit_msg.pose2d = self.compute_pose2d(segmentation)
                 fruit_msg.mask3d = segmentation
-                fruit_msg.pose3d = self.compute_pose3d(fruit_msg.pose2d)
+                fruit_msg.pose3d = self.compute_pose3d(fruit_msg.pose2d, depth_mask)
                 fruit_msg.confidence = 0.93
                 fruit_msg.occlusion_level = 0.88
 
@@ -195,7 +231,9 @@ class FruitDetectionNode(Node):
 
                 # Log and publish the message
                 self.get_logger().info(f'Publishing: image_id={fruit_msg.image_id}, fruit_id={fruit_msg.fruit_id}, type={fruit_msg.fruit_type}, variety={fruit_msg.fruit_variety}, ripeness={fruit_msg.ripeness_category}')
-                self.get_logger().info(f'Publishing pose of fruit: {fruit_msg.pose2d}')
+                #self.get_logger().info(f'Publishing pose of fruit: {fruit_msg.pose2d}')
+                self.get_logger().info(f'Publishing pose of fruit: {fruit_msg.pose3d}')
+                #self.get_logger().info(f'Depth values: {depth_mask}')
                 self.publisher_.publish(fruit_msg)
         except CvBridgeError as e:
             self.get_logger().error(f'CvBridge Error: {e}')
