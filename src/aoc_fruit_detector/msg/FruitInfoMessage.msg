@@ -10,7 +10,7 @@ string fruit_variety        # Specific variety or cultivar (e.g., "Granny Smith"
 string fruit_genotype       # Genotype of the fruit (useful for research or breeding)
 string fruit_quality        # Quality measure (e.g., "High", "Medium", "Low", "Rotten")
 string ripeness_category    # Ripeness category (e.g., "Unripe", "Ripe", "Overripe")
-float32 ripeness_level      # Ripeness level between 0 and 1, continuous metric for ripeness
+float32 ripeness_level      # Ripeness level between 0 and 1, continuous metric for ripeness, more than 1 is overripe
 float32 area                # Area of the detected fruit/vegetable
 float32 volume              # Volume of the detected fruit/vegetable
 float32 weight              # Weight of the detected fruit/vegetable
