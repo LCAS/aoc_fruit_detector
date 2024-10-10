@@ -105,13 +105,14 @@ class DetectronTrainer(LearnerTrainer):
             if(__debug__): print(traceback.format_exc())
             raise Exception(e)
 
-    def train_model(self, resumeType)->DefaultTrainer:
+    def train_model(self, resumeType=False,skipTraining=False)->DefaultTrainer:
         try:
             os.makedirs(self.cfg.OUTPUT_DIR, exist_ok=True)
             #UZ: AgriOpenCoreTrainer class doing augmentation
             aoc_trainer = AOCTrainer(self.cfg)
             aoc_trainer.resume_or_load(resume=resumeType)
-            aoc_trainer.train()
+            if not skipTraining:
+                aoc_trainer.train()
             return aoc_trainer
         except Exception as e:
             logging.error(e)
