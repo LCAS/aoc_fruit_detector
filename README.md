@@ -35,3 +35,6 @@ If there is no depth channel, use a dummy depth value
 ros2 launch aoc_fruit_detector fruit_detection.launch.py constant_depth_value:=0.5
 ```
 
+## Wiki
+
+To get more information about the Fruit Detector, please refer to [Wiki page](https://github.com/usmanzahidi/FruitDetector/wiki)
