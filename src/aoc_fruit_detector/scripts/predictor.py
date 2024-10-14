@@ -54,7 +54,7 @@ if (download_assets):
 rgb_files = sorted([f for f in os.listdir(test_image_dir) if os.path.isfile(os.path.join(test_image_dir,f))])
 
 
-def call_train()->None:
+def call_predictor()->None:
 
     # instantiation
     det_predictor = DetectronPredictor(config_data)
