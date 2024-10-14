@@ -20,7 +20,7 @@ float32[] bvol              # Bounding volume as [x, y, z, width, height, length
 float32[] mask2d            # 2D Mask for segmented fruit/vegetable 
 float32[] mask3d            # 3D Mask for segmented fruit/vegetable 
 geometry_msgs/Pose2D pose2d # 2D pose of fruit/vegetable (x, y, theta) 
-geometry_msgs/Pose pose3d   # 3D pose of the detected fruit/vegetable
+geometry_msgs/PoseStamped pose3d   # 3D pose of the detected fruit/vegetable
 float64 confidence          # Certainty level of the inference
 float64 occlusion_level     # Occlusion level to identify how much of the fruit/vegetable is occluded
 
@@ -50,6 +50,3 @@ string edible_plant_part    # Part of the plant if it is a vegetable instead of 
                             # "Seed Vegetable" (e.g. Peas, Lentil), "Not Vegetable", "Unknown"
                             # "Other",
                             # "Unknown"
-
-sensor_msgs/Image rgb_image     # RGB image used for detection
-sensor_msgs/Image depth_image   # Depth image used for detection
