@@ -3,10 +3,10 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String, Header
-from sensor_msgs.msg import Image
-from geometry_msgs.msg import Pose2D, Pose
-from aoc_fruit_detector.msg import FruitInfoMessage
-from predictor import call_predictor
+from sensor_msgs.msg import Image, CameraInfo
+from geometry_msgs.msg import Pose2D, Pose, PoseStamped
+from aoc_fruit_detector.msg import FruitInfoMessage, FruitInfoArray
+#from predictor import call_predictor
 
 import os, yaml, cv2
 from detectron_predictor.detectron_predictor import DetectronPredictor
@@ -17,12 +17,14 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 
 import numpy as np
 
+import image_geometry
+
 class FruitDetectionNode(Node):
     def __init__(self):
         super().__init__('fruit_detection')
         # Create a publisher for the custom message type
-        self.publisher_ = self.create_publisher(FruitInfoMessage, 'fruit_info', 10)
-        self.prediction_generator = call_predictor()
+        self.publisher_fruit = self.create_publisher(FruitInfoArray, 'fruit_info', 5)
+        self.publisher_comp = self.create_publisher(Image, 'image_composed', 5)
         config_path = self.find_data_folder_config()
         if config_path:
             with open(config_path, 'r') as file:
@@ -43,6 +45,7 @@ class FruitDetectionNode(Node):
             raise FileNotFoundError(f"No config file found in any 'data/config/' folder within {os.getcwd()}")
 
         self.bridge = CvBridge()
+        self.camera_model = image_geometry.PinholeCameraModel()
         
         qos_profile = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
@@ -51,6 +54,7 @@ class FruitDetectionNode(Node):
 
         self.declare_parameter('constant_depth_value', 1.0)  # Default depth value is 1.0
         self.constant_depth_value = self.get_parameter('constant_depth_value').value
+        self.tomato = False
 
         self.image_sub = self.create_subscription(
             Image,
@@ -66,6 +70,13 @@ class FruitDetectionNode(Node):
             qos_profile
         )
 
+        self.camera_info_sub = self.create_subscription(
+            CameraInfo,
+            'camera/camera_info',
+            self.camera_info_callback,
+            qos_profile
+        )
+
     def find_data_folder_config(self,search_dir='.'):
         for root, dirs, _ in os.walk(search_dir):
             if 'data' in dirs:
@@ -76,28 +87,51 @@ class FruitDetectionNode(Node):
                     return config_path
         return None
 
-    def compute_pose2d(self, mask):
+    def compute_pose2d(self, mask, swap_xy=False):
         """Calculate Pose2D from the mask (segmentation coordinates)."""
-        x_coords = mask[0::2]  # Every 2nd element starting from index 0 (x coordinates)
-        y_coords = mask[1::2]  # Every 2nd element starting from index 1 (y coordinates)
         
+        if swap_xy:
+            # Swap x and y if needed
+            x_coords = np.array(mask[1::2])  # Treat every 2nd element starting from index 1 as x coordinates
+            y_coords = np.array(mask[0::2])  # Treat every 2nd element starting from index 0 as y coordinates
+        else:
+            x_coords = np.array(mask[0::2])  # Every 2nd element starting from index 0 (x coordinates)
+            y_coords = np.array(mask[1::2])  # Every 2nd element starting from index 1 (y coordinates)
+
+        # Filter out outliers using a simple statistical approach (remove points too far from the median)
+        x_median = np.median(x_coords)
+        y_median = np.median(y_coords)
+
+        # Calculate distances from the median and define a threshold (e.g., 1.5 * interquartile range)
+        x_distances = np.abs(x_coords - x_median)
+        y_distances = np.abs(y_coords - y_median)
+
+        x_iqr = np.percentile(x_coords, 75) - np.percentile(x_coords, 25)
+        y_iqr = np.percentile(y_coords, 75) - np.percentile(y_coords, 25)
+
+        x_threshold = 1.5 * x_iqr
+        y_threshold = 1.5 * y_iqr
+
+        # Filter points that are within the threshold (outliers removed)
+        filtered_x_coords = x_coords[x_distances < x_threshold]
+        filtered_y_coords = y_coords[y_distances < y_threshold]
+
+        # Calculate the centroid from the filtered points
         pose2d = Pose2D()
-        pose2d.x = sum(x_coords) / len(x_coords)  # Calculate centroid X
-        pose2d.y = sum(y_coords) / len(y_coords)  # Calculate centroid Y
-        pose2d.theta = 0.0  # Assuming no rotation needed for pose2d
-        
+        pose2d.x = np.mean(filtered_x_coords) if len(filtered_x_coords) > 0 else x_median  # Centroid X
+        pose2d.y = np.mean(filtered_y_coords) if len(filtered_y_coords) > 0 else y_median  # Centroid Y
+        pose2d.theta = 0.0  # Assuming rotation is unknown
+
         return pose2d
     
     def compute_pose3d(self, pose2d, depth_mask):
-        pose3d = Pose()
-        pose3d.position.x = pose2d.x
-        pose3d.position.y = pose2d.y
+        pose3d = PoseStamped()
 
         height, width, _ = depth_mask.shape
         x = int(pose2d.x)
         y = int(pose2d.y)
 
-        if 0 <= x < width and 0 <= y < height:
+        if 0 <= x < height and 0 <= y < width:
             depth_values_at_pose = depth_mask[x, y, :]
             non_zero_depth_values = depth_values_at_pose[depth_values_at_pose > 0]
 
@@ -107,16 +141,55 @@ class FruitDetectionNode(Node):
                 nearest_depth_value = 0.0 
         else:
             nearest_depth_value = 0.0
+            self.get_logger().warn(f'Out of size x:{x}, height:{height}, y:{y} and width:{width}')
         
-        pose3d.position.z = nearest_depth_value
+        ray = self.back_project_2d_to_3d_ray(pose2d.x, pose2d.y)
+        p_3d_camera_frame = self.compute_3d_point_from_depth(ray, nearest_depth_value)
+        self.get_logger().info(f'3D point at depth {nearest_depth_value}: [{p_3d_camera_frame[0]:.2f}, {p_3d_camera_frame[1]:.2f}, {p_3d_camera_frame[2]:.2f}]')
+
+        pose3d.pose.position.x = p_3d_camera_frame[0]
+        pose3d.pose.position.y = p_3d_camera_frame[1]
+        pose3d.pose.position.z = p_3d_camera_frame[2]
         
         # Identity quaternion (no rotation)
-        pose3d.orientation.x = 0.0
-        pose3d.orientation.y = 0.0
-        pose3d.orientation.z = 0.0
-        pose3d.orientation.w = 1.0  # No rotation
+        pose3d.pose.orientation.x = 0.0
+        pose3d.pose.orientation.y = 0.0
+        pose3d.pose.orientation.z = 0.0
+        pose3d.pose.orientation.w = 1.0  # No rotation
+
+        pose3d.header.frame_id = self.pose3d_frame
+        pose3d.header.stamp = self.get_clock().now().to_msg()
     
         return pose3d
+
+    def camera_info_callback(self, msg):
+        
+        self.from_camera_info(msg)
+        #self.camera_model, self.distortion_coeffs = self.from_camera_info(msg)
+
+        self.pose3d_frame = msg.header.frame_id
+
+        self.get_logger().info('Camera model initialized')
+    
+    def from_camera_info(self, msg):
+        self.camera_model.fromCameraInfo(msg)
+        #camera_matrix = np.array(msg.k).reshape(3, 3)
+        #distortion_coeffs = np.array(msg.d)
+        #return camera_matrix, distortion_coeffs
+
+    def back_project_2d_to_3d_ray(self, u, v):
+        ray = self.camera_model.projectPixelTo3dRay((u, v))
+        return ray
+        #pixel = np.array([[u, v]], dtype=np.float32)
+        #pixel = np.expand_dims(pixel, axis=0)
+        #undistorted_point = cv2.undistortPoints(pixel, self.camera_model, self.distortion_coeffs)
+        #ray = [undistorted_point[0][0][0], undistorted_point[0][0][1], 1.0]
+        
+        #return ray
+    
+    def compute_3d_point_from_depth(self, ray, depth):
+        # Compute the 3D point by scaling the ray direction with the depth
+        return [ray[0] * depth, ray[1] * depth, ray[2] * depth]
 
     def depth_callback(self, msg):
         try:
@@ -130,6 +203,7 @@ class FruitDetectionNode(Node):
     
     def image_callback(self, msg):
         try:
+            self.get_logger().info("Image captured.")
             # Convert ROS Image message to OpenCV image
             self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
             self.get_logger().info("RGB ready.")
@@ -176,7 +250,8 @@ class FruitDetectionNode(Node):
             else:
                 self.get_logger().info("No annotations found.")'''
 
-            self.get_logger().info(f"depth_mask.shape: {depth_mask.shape}")
+            fruits_msg = FruitInfoArray()
+            fruits_msg.fruits = []
 
             for annotation in annotations:
                 #self.get_logger().info(f'Annotation: {annotation}')
@@ -200,14 +275,25 @@ class FruitDetectionNode(Node):
                 fruit_msg.header.frame_id = rgb_msg.header.frame_id
                 fruit_msg.fruit_id = fruit_id
                 fruit_msg.image_id = image_id
-                ### Fruit Biological Features ####
-                fruit_msg.pomological_class = 'Edible Plant'
-                fruit_msg.edible_plant_part = 'Culinary Vegetable'
-                fruit_msg.fruit_family = 'Solanaceae'
-                fruit_msg.fruit_species = 'Solanum lycopersicum'
-                fruit_msg.fruit_type = 'Tomato'
-                fruit_msg.fruit_variety = 'Plum'
-                fruit_msg.fruit_genotype = 'San Marzano'
+                ### Tomato Fruit Biological Features ####
+                if self.tomato:
+                    fruit_msg.pomological_class = 'Edible Plant'
+                    fruit_msg.edible_plant_part = 'Culinary Vegetable'
+                    fruit_msg.fruit_family = 'Solanaceae'
+                    fruit_msg.fruit_species = 'Solanum lycopersicum'
+                    fruit_msg.fruit_type = 'Tomato'
+                    fruit_msg.fruit_variety = 'Plum'
+                    fruit_msg.fruit_genotype = 'San Marzano'
+                else:
+                    ### Strawberry Fruit Biological Features ####
+                    fruit_msg.pomological_class = 'Aggregate'
+                    fruit_msg.edible_plant_part = 'Other'
+                    fruit_msg.fruit_family = 'Unknown'
+                    fruit_msg.fruit_species = 'Unknown'
+                    fruit_msg.fruit_type = 'Strawberry'
+                    fruit_msg.fruit_variety = 'Unknown'
+                    fruit_msg.fruit_genotype = 'Unknown'
+
                 #####################################
                 fruit_msg.fruit_quality = 'High'
                 fruit_msg.ripeness_category = ripeness_category
@@ -220,25 +306,59 @@ class FruitDetectionNode(Node):
                 fruit_msg.bbox = bbox
                 fruit_msg.bvol = bbox
                 fruit_msg.mask2d = segmentation
-                fruit_msg.pose2d = self.compute_pose2d(segmentation)
+                fruit_msg.pose2d = self.compute_pose2d(segmentation, True)
                 fruit_msg.mask3d = segmentation
                 fruit_msg.pose3d = self.compute_pose3d(fruit_msg.pose2d, depth_mask)
                 fruit_msg.confidence = 0.93
                 fruit_msg.occlusion_level = 0.88
 
-                fruit_msg.rgb_image = rgb_msg        # Assign the current RGB image
-                fruit_msg.depth_image = depth_msg    # Assign the stored depth image
-
                 # Log and publish the message
-                self.get_logger().info(f'Publishing: image_id={fruit_msg.image_id}, fruit_id={fruit_msg.fruit_id}, type={fruit_msg.fruit_type}, variety={fruit_msg.fruit_variety}, ripeness={fruit_msg.ripeness_category}')
+                #self.get_logger().info(f'Publishing: image_id={fruit_msg.image_id}, fruit_id={fruit_msg.fruit_id}, type={fruit_msg.fruit_type}, variety={fruit_msg.fruit_variety}, ripeness={fruit_msg.ripeness_category}')
                 #self.get_logger().info(f'Publishing pose of fruit: {fruit_msg.pose2d}')
-                self.get_logger().info(f'Publishing pose of fruit: {fruit_msg.pose3d}')
+                #self.get_logger().info(f'Publishing pose of fruit: {fruit_msg.pose3d}')
                 #self.get_logger().info(f'Depth values: {depth_mask}')
-                self.publisher_.publish(fruit_msg)
+                fruits_msg.fruits.append(fruit_msg)
+            fruits_msg.rgb_image = rgb_msg        # Assign the current RGB image
+            fruits_msg.depth_image = depth_msg    # Assign the stored depth image
+
+            fruits_msg.rgb_image_composed = self.add_markers_on_image(self.cv_image, fruits_msg)
+            self.publisher_fruit.publish(fruits_msg)
+            self.publisher_comp.publish(fruits_msg.rgb_image_composed)
+            self.get_logger().info("Published")
         except CvBridgeError as e:
             self.get_logger().error(f'CvBridge Error: {e}')
         except Exception as e:
             self.get_logger().error(f'Error processing image: {e}')
+
+    def add_markers_on_image(self, cv_image, fruits_info):
+        height, width, _ = cv_image.shape  # Get image dimensions
+        scale_factor = min(width, height) / 750  # Scale the circle size based on image dimensions
+        
+        for fruit in fruits_info.fruits:
+            x = int(fruit.pose2d.x)
+            y = int(fruit.pose2d.y)
+            
+            # Set color based on ripeness
+            if fruit.ripeness_level < 0.5:
+                color = (0, 255, 0)  # Green for unripe
+            else:
+                color = (0, 0, 255)  # Red for ripe
+            
+            # Scale the radius based on the image size (e.g., a base of 10 pixels scaled)
+            radius = int(10 * scale_factor)
+            
+            # Draw the circle marker
+            cv2.circle(cv_image, (y, x), radius, color, -1)
+            
+            # Draw the mask outline
+            mask_points = np.array(fruit.mask2d, dtype=np.int32).reshape((-1, 2))  # Convert 1D mask to Nx2 format
+            
+            # Draw the polygon mask outline
+            cv2.polylines(cv_image, [mask_points], isClosed=True, color=color, thickness=3)
+
+        # Convert the modified image back to a ROS image message
+        composed_image = self.bridge.cv2_to_imgmsg(cv_image, encoding='bgr8')
+        return composed_image
 
 def main(args=None):
     rclpy.init(args=args)

@@ -3,6 +3,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, ExecuteProcess
 from ament_index_python.packages import get_package_prefix
 from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
 
 def generate_launch_description():
     # Get the installation path of the package
@@ -28,7 +29,8 @@ def generate_launch_description():
             '--ros-args',
             '--param', ['constant_depth_value:=', LaunchConfiguration('constant_depth_value')],
             '--remap', '/camera/image_raw:=/flir_camera/image_raw', # /zed/zed_node/rgb_raw/image_raw_color or /front_camera/image_raw
-            '--remap', '/camera/depth:=/zed/zed_node/depth/depth_registered' # /zed/zed_node/depth/depth_registered or /front_camera/depth
+            '--remap', '/camera/depth:=/zed/zed_node/depth/depth_registered', # /zed/zed_node/depth/depth_registered or /front_camera/depth
+            '--remap', '/camera/camera_info:=/flir_camera/camera_info'
             ],
         output='screen'
     )
