@@ -23,6 +23,13 @@ python -m pip install -e detectron2
 
 ## Usage
 
+Build package with
+
+```bash
+colcon build --symlink-install
+source install/setup.bash 
+```
+
 Run package to publish annotations detected by aoc_fruit_detector package 
 
 ```bash
