@@ -14,11 +14,16 @@ find_package(geometry_msgs REQUIRED)
 
 find_package(sensor_msgs REQUIRED)
 
+find_package(visualization_msgs REQUIRED)
+
+find_package(image_geometry REQUIRED)
+
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/FruitInfoMessage.msg"
-  DEPENDENCIES std_msgs geometry_msgs sensor_msgs
+  "msg/FruitInfoArray.msg"
+  DEPENDENCIES std_msgs geometry_msgs sensor_msgs visualization_msgs image_geometry
 )
 
 # Install Python scripts
