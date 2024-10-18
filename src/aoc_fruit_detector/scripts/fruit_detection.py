@@ -6,6 +6,7 @@ from std_msgs.msg import String, Header
 from sensor_msgs.msg import Image, CameraInfo
 from geometry_msgs.msg import Pose2D, Pose, PoseStamped
 from aoc_fruit_detector.msg import FruitInfoMessage, FruitInfoArray
+from visualization_msgs.msg import Marker, MarkerArray
 #from predictor import call_predictor
 
 import os, yaml, cv2
@@ -25,6 +26,7 @@ class FruitDetectionNode(Node):
         # Create a publisher for the custom message type
         self.publisher_fruit = self.create_publisher(FruitInfoArray, 'fruit_info', 5)
         self.publisher_comp = self.create_publisher(Image, 'image_composed', 5)
+        self.publisher_3dmarkers = self.create_publisher(MarkerArray, 'fruit_markers', 5)
         config_path = self.find_data_folder_config()
         if config_path:
             with open(config_path, 'r') as file:
@@ -49,7 +51,7 @@ class FruitDetectionNode(Node):
         
         qos_profile = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
-            depth=10
+            depth=1
         )
 
         self.declare_parameter('constant_depth_value', 1.0)  # Default depth value is 1.0
@@ -124,6 +126,52 @@ class FruitDetectionNode(Node):
 
         return pose2d
     
+    def publish_fruit_markers(self, fruits_msg):
+        marker_array = MarkerArray()
+
+        # Loop over the detected fruits and create a marker for each one
+        for i, fruit_msg in enumerate(fruits_msg.fruits):
+            marker = self.create_fruit_marker(fruit_msg, i)  # Create a marker with unique ID
+            marker_array.markers.append(marker)
+
+        # Publish the marker array
+        self.publisher_3dmarkers.publish(marker_array)
+
+    def create_fruit_marker(self, fruit_msg, marker_id):
+        marker = Marker()
+
+        marker.header.frame_id = self.pose3d_frame
+        marker.header.stamp = self.get_clock().now().to_msg()
+
+        marker.ns = "fruits"
+        marker.id = marker_id
+
+        marker.type = Marker.SPHERE  # You can choose other marker types like CUBE, ARROW, etc.
+        marker.action = Marker.ADD
+
+        # Set the pose using the fruit's 3D pose
+        marker.pose.position.x = fruit_msg.pose3d.pose.position.x
+        marker.pose.position.y = fruit_msg.pose3d.pose.position.y
+        marker.pose.position.z = fruit_msg.pose3d.pose.position.z
+
+        # Set orientation (same as the pose you computed earlier)
+        marker.pose.orientation = fruit_msg.pose3d.pose.orientation
+
+        # Set the scale of the marker (size of the fruit marker)
+        marker.scale.x = 0.02
+        marker.scale.y = 0.02
+        marker.scale.z = 0.02
+
+        # Set the color (RGBA)
+        marker.color.r = 0.0
+        marker.color.g = 0.0
+        marker.color.b = 1.0
+        marker.color.a = 1.0  # Fully opaque
+
+        marker.lifetime = rclpy.time.Duration(seconds=0).to_msg()
+
+        return marker
+
     def compute_pose3d(self, pose2d, depth_mask):
         pose3d = PoseStamped()
 
@@ -136,16 +184,16 @@ class FruitDetectionNode(Node):
             non_zero_depth_values = depth_values_at_pose[depth_values_at_pose > 0]
 
             if non_zero_depth_values.size > 0:
-                nearest_depth_value = np.min(non_zero_depth_values)
+                closest_depth_value = np.min(non_zero_depth_values)
             else:
-                nearest_depth_value = 0.0 
+                closest_depth_value = 0.0 
         else:
-            nearest_depth_value = 0.0
+            closest_depth_value = 0.0
             self.get_logger().warn(f'Out of size x:{x}, height:{height}, y:{y} and width:{width}')
         
         ray = self.back_project_2d_to_3d_ray(pose2d.x, pose2d.y)
-        p_3d_camera_frame = self.compute_3d_point_from_depth(ray, nearest_depth_value)
-        self.get_logger().info(f'3D point at depth {nearest_depth_value}: [{p_3d_camera_frame[0]:.2f}, {p_3d_camera_frame[1]:.2f}, {p_3d_camera_frame[2]:.2f}]')
+        p_3d_camera_frame = self.compute_3d_point_from_depth(ray, closest_depth_value)
+        #self.get_logger().info(f'3D point at depth {closest_depth_value}: [{p_3d_camera_frame[0]:.2f}, {p_3d_camera_frame[1]:.2f}, {p_3d_camera_frame[2]:.2f}]')
 
         pose3d.pose.position.x = p_3d_camera_frame[0]
         pose3d.pose.position.y = p_3d_camera_frame[1]
@@ -178,7 +226,9 @@ class FruitDetectionNode(Node):
         #return camera_matrix, distortion_coeffs
 
     def back_project_2d_to_3d_ray(self, u, v):
-        ray = self.camera_model.projectPixelTo3dRay((u, v))
+        #ray = self.camera_model.projectPixelTo3dRay((u, v))
+        v_flipped = self.camera_model.height - v
+        ray = self.camera_model.projectPixelTo3dRay((u, v_flipped))
         return ray
         #pixel = np.array([[u, v]], dtype=np.float32)
         #pixel = np.expand_dims(pixel, axis=0)
@@ -322,6 +372,7 @@ class FruitDetectionNode(Node):
             fruits_msg.depth_image = depth_msg    # Assign the stored depth image
 
             fruits_msg.rgb_image_composed = self.add_markers_on_image(self.cv_image, fruits_msg)
+            self.publish_fruit_markers(fruits_msg)
             self.publisher_fruit.publish(fruits_msg)
             self.publisher_comp.publish(fruits_msg.rgb_image_composed)
             self.get_logger().info("Published")
@@ -332,7 +383,7 @@ class FruitDetectionNode(Node):
 
     def add_markers_on_image(self, cv_image, fruits_info):
         height, width, _ = cv_image.shape  # Get image dimensions
-        scale_factor = min(width, height) / 750  # Scale the circle size based on image dimensions
+        scale_factor = min(width, height) / 1500  # Scale the circle size based on image dimensions
         
         for fruit in fruits_info.fruits:
             x = int(fruit.pose2d.x)
@@ -354,7 +405,7 @@ class FruitDetectionNode(Node):
             mask_points = np.array(fruit.mask2d, dtype=np.int32).reshape((-1, 2))  # Convert 1D mask to Nx2 format
             
             # Draw the polygon mask outline
-            cv2.polylines(cv_image, [mask_points], isClosed=True, color=color, thickness=3)
+            cv2.polylines(cv_image, [mask_points], isClosed=True, color=color, thickness=5)
 
         # Convert the modified image back to a ROS image message
         composed_image = self.bridge.cv2_to_imgmsg(cv_image, encoding='bgr8')
