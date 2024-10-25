@@ -48,15 +48,18 @@ class FruitDetectionNode(Node):
 
         self.bridge = CvBridge()
         self.camera_model = image_geometry.PinholeCameraModel()
+        self.set_default_camera_model() # in case camera_info message not available 
         
         qos_profile = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
             depth=1
         )
 
-        self.declare_parameter('constant_depth_value', 1.0)  # Default depth value is 1.0
+        self.declare_parameter('constant_depth_value', 1.0)
         self.constant_depth_value = self.get_parameter('constant_depth_value').value
+
         self.tomato = False
+        self.pose3d_frame = ''
 
         self.image_sub = self.create_subscription(
             Image,
@@ -210,6 +213,37 @@ class FruitDetectionNode(Node):
     
         return pose3d
 
+    def set_default_camera_model(self):
+        """
+        Sets the camera model to default intrinsic parameters (pinhole model)
+        """
+        default_fx = 525.0  # Focal length in x (pixels)
+        default_fy = 525.0  # Focal length in y (pixels)
+        default_cx = 319.5  # Principal point x (image center in pixels)
+        default_cy = 239.5  # Principal point y (image center in pixels)
+        image_width = 640
+        image_height = 480
+
+        # Create a fake CameraInfo message to initialize the camera model
+        camera_info = CameraInfo()
+        camera_info.width = image_width
+        camera_info.height = image_height
+        camera_info.distortion_model = "plumb_bob"  # Default distortion model
+
+        # Set the intrinsic camera matrix K (3x3 matrix)
+        camera_info.k = [default_fx, 0.0, default_cx, 0.0, default_fy, default_cy, 0.0, 0.0, 1.0]
+
+        # Set the projection matrix P (3x4 matrix)
+        camera_info.p = [default_fx, 0.0, default_cx, 0.0, 0.0, default_fy, default_cy, 0.0, 0.0, 0.0, 1.0, 0.0]
+
+        # Set default distortion coefficients (D)
+        camera_info.d = [0.0, 0.0, 0.0, 0.0, 0.0]
+
+        # Initialize the camera model with the default CameraInfo
+        self.camera_model.fromCameraInfo(camera_info)
+
+        self.get_logger().info("Default camera model initialised with intrinsic parameters")
+
     def camera_info_callback(self, msg):
         
         self.from_camera_info(msg)
@@ -217,7 +251,7 @@ class FruitDetectionNode(Node):
 
         self.pose3d_frame = msg.header.frame_id
 
-        self.get_logger().info('Camera model initialized')
+        self.get_logger().info('Camera model acquired from camera_info message and initialised with intrinsic parameters')
     
     def from_camera_info(self, msg):
         self.camera_model.fromCameraInfo(msg)
@@ -245,12 +279,18 @@ class FruitDetectionNode(Node):
         try:
             # Convert ROS2 depth Image message to OpenCV depth image
             self.cv_depth_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='32FC1')
-            self.depth_msg = msg
-            # To replace NaN with max_depth value
-            # self.cv_depth_image[np.isnan(self.cv_depth_image)] = self.max_depth 
+            # To replace NaN and Inf with max_depth value
+            self.cv_depth_image[np.isnan(self.cv_depth_image)] = self.max_depth
+            self.cv_depth_image[np.isinf(self.cv_depth_image)] = self.max_depth
+            self.depth_msg = msg 
         except Exception as e:
             self.get_logger().error(f"Error processing depth image: {e}")
     
+    def create_confidence_dict(self, confidence_list):
+        # Create a dictionary with annotation_id as the key and confidence as the value
+        return {entry['annotation_id']: entry['confidence'] for entry in confidence_list}
+
+
     def image_callback(self, msg):
         try:
             self.get_logger().info("Image captured.")
@@ -286,7 +326,15 @@ class FruitDetectionNode(Node):
             self.get_logger().info("RGBD ready")
             
             json_annotation_message, _, depth_mask = self.det_predictor.get_predictions_message(rgbd_image,image_id)
+
+            #info = json_annotation_message.get('info', [])
+            #licenses = json_annotation_message.get('licenses', [])
+            #self.get_logger().info(f"Info: {info}")
+            #self.get_logger().info(f"License: {licenses}")
+            #image_info = json_annotation_message.get('images', [])
+            #self.get_logger().info(f"images: {image_info}")
             annotations = json_annotation_message.get('annotations', [])
+            confidence_list = json_annotation_message.get('confidence', [])
             categories = json_annotation_message.get('categories', [])
 
             '''if isinstance(annotations, list) and len(annotations) > 0:
@@ -302,6 +350,8 @@ class FruitDetectionNode(Node):
 
             fruits_msg = FruitInfoArray()
             fruits_msg.fruits = []
+            
+            confidence_dict = self.create_confidence_dict(confidence_list)
 
             for annotation in annotations:
                 #self.get_logger().info(f'Annotation: {annotation}')
@@ -359,9 +409,8 @@ class FruitDetectionNode(Node):
                 fruit_msg.pose2d = self.compute_pose2d(segmentation, True)
                 fruit_msg.mask3d = segmentation
                 fruit_msg.pose3d = self.compute_pose3d(fruit_msg.pose2d, depth_mask)
-                fruit_msg.confidence = 0.93
+                fruit_msg.confidence = float(confidence_dict.get(fruit_id, '-1.0'))
                 fruit_msg.occlusion_level = 0.88
-
                 # Log and publish the message
                 #self.get_logger().info(f'Publishing: image_id={fruit_msg.image_id}, fruit_id={fruit_msg.fruit_id}, type={fruit_msg.fruit_type}, variety={fruit_msg.fruit_variety}, ripeness={fruit_msg.ripeness_category}')
                 #self.get_logger().info(f'Publishing pose of fruit: {fruit_msg.pose2d}')
@@ -370,7 +419,6 @@ class FruitDetectionNode(Node):
                 fruits_msg.fruits.append(fruit_msg)
             fruits_msg.rgb_image = rgb_msg        # Assign the current RGB image
             fruits_msg.depth_image = depth_msg    # Assign the stored depth image
-
             fruits_msg.rgb_image_composed = self.add_markers_on_image(self.cv_image, fruits_msg)
             self.publish_fruit_markers(fruits_msg)
             self.publisher_fruit.publish(fruits_msg)
