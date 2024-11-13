@@ -48,4 +48,4 @@ To get more information about the Fruit Detector, please refer to [Wiki page][wi
 
 ---
 
-[wiki_page]: (https://github.com/LCAS/fruit_detector/wiki)
+[wiki_page]: https://github.com/LCAS/fruit_detector/wiki
