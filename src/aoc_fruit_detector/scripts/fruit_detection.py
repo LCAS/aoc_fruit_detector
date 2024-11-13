@@ -20,6 +20,8 @@ import numpy as np
 
 import image_geometry
 
+from ament_index_python.packages import get_package_share_directory, PackageNotFoundError
+
 class FruitDetectionNode(Node):
     def __init__(self):
         super().__init__('fruit_detection')
@@ -27,16 +29,20 @@ class FruitDetectionNode(Node):
         self.publisher_fruit = self.create_publisher(FruitInfoArray, 'fruit_info', 5)
         self.publisher_comp = self.create_publisher(Image, 'image_composed', 5)
         self.publisher_3dmarkers = self.create_publisher(MarkerArray, 'fruit_markers', 5)
-        config_path = self.find_data_folder_config()
+        self.package_name = 'aoc_fruit_detector'
+        config_path = self.get_parameters_file()
         if config_path:
             with open(config_path, 'r') as file:
                 config_data = yaml.safe_load(file)
-                self.det_predictor = DetectronPredictor(config_data)
+                
+                for section in ['files', 'directories']:
+                    if section in config_data:
+                        for key, path in config_data[section].items():
+                            if path.startswith('./'):
+                                package_share_directory = get_package_share_directory(self.package_name)
+                                config_data[section][key] = os.path.join(package_share_directory, path.lstrip('./'))
 
-                test_image_dir              = config_data['directories']['train_image_dir']
-                prediction_json_output_dir  = config_data['directories']['prediction_json_dir']
-                self.test_image_dir = test_image_dir
-                self.prediction_json_output_dir = prediction_json_output_dir
+                self.det_predictor = DetectronPredictor(config_data)
 
                 # Declare parameters for min_depth and max_depth
                 self.declare_parameter('min_depth', 0.1)  # Default value
@@ -44,7 +50,7 @@ class FruitDetectionNode(Node):
                 self.min_depth = self.get_parameter('min_depth').value
                 self.max_depth = self.get_parameter('max_depth').value
         else:
-            raise FileNotFoundError(f"No config file found in any 'data/config/' folder within {os.getcwd()}")
+            raise FileNotFoundError(f"No config file found in any ' {self.package_name}/config/' folder within {os.getcwd()}")
 
         self.bridge = CvBridge()
         self.camera_model = image_geometry.PinholeCameraModel()
@@ -84,13 +90,27 @@ class FruitDetectionNode(Node):
 
     def find_data_folder_config(self,search_dir='.'):
         for root, dirs, _ in os.walk(search_dir):
-            if 'data' in dirs:
-                data_folder = os.path.join(root, 'data')
-                config_path = os.path.join(data_folder, 'config', 'config.yaml')
-                # Check if config.yaml exists in the data/config folder
+            if 'aoc_fruit_detector' in dirs:
+                data_folder = os.path.join(root, 'aoc_fruit_detector')
+                config_path = os.path.join(data_folder, 'config', 'parameters.yaml')
+                # Check if parameters.yaml exists in the aoc_fruit_detector/config folder
                 if os.path.exists(config_path):
                     return config_path
         return None
+    
+    def get_parameters_file(self):
+        try:
+            package_share_directory = get_package_share_directory(self.package_name)
+        except PackageNotFoundError:
+            raise FileNotFoundError("Package '{self.package_name}' not found in the workspace.")
+        
+        config_path = os.path.join(package_share_directory, 'config', 'parameters.yaml')
+        
+        # Check if parameters.yaml exists at the expected location
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f"No config file found at '{config_path}'")
+        
+        return config_path
 
     def compute_pose2d(self, mask, swap_xy=False):
         """Calculate Pose2D from the mask (segmentation coordinates)."""
