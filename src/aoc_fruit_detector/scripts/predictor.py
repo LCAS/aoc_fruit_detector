@@ -25,12 +25,23 @@ def find_data_folder_config(search_dir='.'):
                 return config_path
     return None
 
-config_path = find_data_folder_config()
+def find_config_file(config_name='parameters.yaml', search_dir='.'):
+    for root, dirs, files in os.walk(search_dir):
+        if config_name in files:
+            return os.path.join(root, config_name)
+    return None
+
+#config_path = find_data_folder_config()
+config_name = 'parameters.yaml'
+search_dir = 'aoc_fruit_detector/config'
+config_path = find_config_file(config_name, search_dir)
+
 if config_path:
     with open(config_path, 'r') as file:
         config_data = yaml.safe_load(file)
 else:
-    raise FileNotFoundError(f"No config file found in any 'data/config/' folder within {os.getcwd()}")
+    #raise FileNotFoundError(f"No config file found in any 'data/config/' folder within {os.getcwd()}")
+    raise FileNotFoundError(f"No '{config_name}' found in '{search_dir}' or any of its subdirectories")
 
 name_train                  = config_data['datasets']['train_dataset_name']
 name_test                   = config_data['datasets']['test_dataset_name']
@@ -101,7 +112,7 @@ def call_trainer(resumeType=False,skipTraining=False)->None:
     try:
         detTrainer=DetectronTrainer(config_data)
         aoc_trainer=detTrainer.train_model(resumeType=resumeType,skipTraining=skipTraining) # set resumeType=True when continuing training on top of parly trained models
-        detTrainer.evaluate_model(aoc_trainer.model);
+        detTrainer.evaluate_model(aoc_trainer.model)
     except Exception as e:
         logging.error(e)
         print(traceback.format_exc()) if __debug__ else print(e)
