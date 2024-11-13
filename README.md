@@ -44,4 +44,8 @@ ros2 launch aoc_fruit_detector fruit_detection.launch.py constant_depth_value:=0
 
 ## Wiki
 
-To get more information about the Fruit Detector, please refer to [Wiki page](https://github.com/usmanzahidi/FruitDetector/wiki)
+To get more information about the Fruit Detector, please refer to [Wiki page][wiki_page]
+
+---
+
+[wiki_page]: (https://github.com/LCAS/fruit_detector/wiki)
