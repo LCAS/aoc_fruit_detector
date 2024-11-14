@@ -1,0 +1,49 @@
+version: "3.8"
+services:
+  fruit_detector:
+    labels:
+      - deploy.user=${USER}
+    image: lcas.lincoln.ac.uk/lcas/ros:jammy-humble-cuda12.2-opengl
+    build:
+      dockerfile: .devcontainer/Dockerfile
+      context: ..
+      target: final
+    networks:
+      - developer
+
+    # add network admin capability for multicast
+    cap_add:
+      - NET_ADMIN
+
+    environment:
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - HOST_USER=${USER:-anonymous}
+      - HOST_HOSTNAME=${HOSTNAME:-unknown}
+
+    # by default add multicast to lo interface and then sleep forever
+    command: "bash -c 'sudo ifconfig lo multicast; sudo route add -net 224.0.0.0 netmask 240.0.0.0 dev lo; sleep infinity'"
+
+    ports:
+      - "${HOST_PORT:-5801}:5801"
+
+    # Enabling GPU access with Compose
+    # https://docs.docker.com/compose/gpu-support/
+    deploy:
+      resources:
+        reservations:
+          devices:
+             - capabilities: [gpu]
+               count: all
+
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - ../:/home/ros/fruit_detector_ws/src/fruit_detector_ros2_pkg:rw
+      - /media:/media:rw
+
+networks:
+  developer:
+    driver: bridge
+    driver_opts:
+      com.docker.network.enable_ipv6: "false"
+      com.docker.network.container_iface_prefix: "eth"   
