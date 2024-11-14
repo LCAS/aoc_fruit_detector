@@ -5,7 +5,8 @@ RUN apt-get update \
     python3-pip \
     python3-rosdep \
     ros-humble-rmw-cyclonedds-cpp \
-    ros-humble-cyclonedds 
+    ros-humble-cyclonedds \
+    ninja-build
 
 # Install required system libraries for systemd
 RUN apt-get update && \
