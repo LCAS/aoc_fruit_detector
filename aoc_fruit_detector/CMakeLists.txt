@@ -32,7 +32,7 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-foreach (dir launch config)
+foreach (dir launch config scripts/data scripts/model)
     install(DIRECTORY ${dir} DESTINATION share/${PROJECT_NAME})
 endforeach(dir)
 
