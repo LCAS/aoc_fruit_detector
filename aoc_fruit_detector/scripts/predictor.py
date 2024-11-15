@@ -35,6 +35,7 @@ def find_config_file(config_name='parameters.yaml', search_dir='.'):
 config_name = 'parameters.yaml'
 search_dir = 'aoc_fruit_detector/config'
 config_path = find_config_file(config_name, search_dir)
+ref_mask_file_path=os.path.join(search_dir,'reference_mask','straw_reference_mask.png')
 
 if config_path:
     with open(config_path, 'r') as file:
@@ -74,11 +75,16 @@ def call_predictor()->None:
     sample_no=1
     for rgb_file in rgb_files:
         image_file_name=os.path.join(test_image_dir, rgb_file)
+        ref_mask= cv2.imread(ref_mask_file_path)
         rgb_image   = cv2.imread(image_file_name)
         rgbd_image = np.dstack([rgb_image,rgb_image[:,:,0]]) #making blue as depth
 
         if rgb_image is None :
             message = 'path to rgb is invalid or inaccessible'
+            logging.error(message)
+
+        if ref_mask is None :
+            message = 'path to reference mask is invalid or inaccessible'
             logging.error(message)
 
         # ** main call **
@@ -91,12 +97,15 @@ def call_predictor()->None:
 
             if (__debug__):
 
-                json_annotation_message,predicted_image,depth_masks = det_predictor.get_predictions_image(rgbd_image, prediction_json_output_file,
-                                                                                image_file_name,sample_no)
+                json_annotation_message, predicted_image, depth_masks = det_predictor.get_predictions_image(rgbd_image,
+                                                                                                            prediction_json_output_file,
+                                                                                                            image_file_name,
+                                                                                                            sample_no,
+                                                                                                            ref_mask)
 
             else:
                 dummy_image_id=1
-                json_annotation_message, predicted_image,depth_masks = det_predictor.get_predictions_message(rgbd_image, dummy_image_id)
+                json_annotation_message, predicted_image,depth_masks = det_predictor.get_predictions_message(rgbd_image, dummy_image_id,ref_mask)
             # Use output json_annotation_message,predicted_image as per requirement
             # In Optimized (non-debug) mode predicted_image is None
 
