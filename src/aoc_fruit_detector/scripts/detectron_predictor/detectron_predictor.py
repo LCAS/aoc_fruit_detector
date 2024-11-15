@@ -155,6 +155,7 @@ class DetectronPredictor(LearnerPredictor):
 
     def get_predictions_message(self, rgbd_image, image_id=0,ref_mask=None):
         predicted_image = None
+        self.segm_masks_only = None
         depth_image = rgbd_image[:, :, 3]
         rgb_image = rgbd_image[:, :, :3].astype(np.uint8)
         output_json_file_path=''
