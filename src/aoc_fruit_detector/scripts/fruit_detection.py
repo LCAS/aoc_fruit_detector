@@ -112,6 +112,31 @@ class FruitDetectionNode(Node):
         
         return config_path
 
+    def compute_pose2d_(self, annotation_id, pose_dict):
+        """
+        Retrieve Pose2D from the pose_dict using the fruit_id.
+
+        Args:
+            annotation_id (int): The ID of the fruit (annotation ID).
+            pose_dict (dict): Dictionary containing centroids and orientations indexed by annotation ID.
+
+        Returns:
+            Pose2D: The 2D pose (x, y, theta) for the given fruit_id.
+        """
+
+        pose2d = Pose2D()
+        if annotation_id in pose_dict:
+            centroid, orientation = pose_dict[annotation_id]
+            pose2d.x = float(centroid[0])  # Centroid X
+            pose2d.y = float(centroid[1])  # Centroid Y
+            pose2d.theta = orientation  # Orientation (theta) in degree
+        else:
+            # Default values
+            pose2d.x = float('nan')
+            pose2d.y = float('nan')
+            pose2d.theta = float('nan')
+        return pose2d
+    
     def compute_pose2d(self, mask, swap_xy=False):
         """Calculate Pose2D from the mask (segmentation coordinates)."""
         
@@ -310,6 +335,8 @@ class FruitDetectionNode(Node):
         # Create a dictionary with annotation_id as the key and confidence as the value
         return {entry['annotation_id']: entry['confidence'] for entry in confidence_list}
 
+    def create_pose_dict(self, pose_list):
+        return {entry['annotation_id']: (entry['centroid'], entry['orientation']) for entry in pose_list}
 
     def image_callback(self, msg):
         try:
@@ -355,6 +382,7 @@ class FruitDetectionNode(Node):
             #self.get_logger().info(f"images: {image_info}")
             annotations = json_annotation_message.get('annotations', [])
             confidence_list = json_annotation_message.get('confidence', [])
+            pose_list = json_annotation_message.get('orientation', [])
             categories = json_annotation_message.get('categories', [])
 
             '''if isinstance(annotations, list) and len(annotations) > 0:
@@ -372,6 +400,8 @@ class FruitDetectionNode(Node):
             fruits_msg.fruits = []
             
             confidence_dict = self.create_confidence_dict(confidence_list)
+
+            pose_dict = self.create_pose_dict(pose_list)
 
             for annotation in annotations:
                 #self.get_logger().info(f'Annotation: {annotation}')
@@ -426,7 +456,7 @@ class FruitDetectionNode(Node):
                 fruit_msg.bbox = bbox
                 fruit_msg.bvol = bbox
                 fruit_msg.mask2d = segmentation
-                fruit_msg.pose2d = self.compute_pose2d(segmentation, True)
+                fruit_msg.pose2d = self.compute_pose2d_(fruit_id, pose_dict)
                 fruit_msg.mask3d = segmentation
                 fruit_msg.pose3d = self.compute_pose3d(fruit_msg.pose2d, depth_mask)
                 fruit_msg.confidence = float(confidence_dict.get(fruit_id, '-1.0'))
@@ -467,7 +497,7 @@ class FruitDetectionNode(Node):
             radius = int(10 * scale_factor)
             
             # Draw the circle marker
-            cv2.circle(cv_image, (y, x), radius, color, -1)
+            cv2.circle(cv_image, (x, y), radius, color, -1)
             
             # Draw the mask outline
             mask_points = np.array(fruit.mask2d, dtype=np.int32).reshape((-1, 2))  # Convert 1D mask to Nx2 format
