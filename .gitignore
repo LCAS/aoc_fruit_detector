@@ -52,7 +52,8 @@ qtcreator-*
 CATKIN_IGNORE
 
 # Detector specific files
-src/**/model/
+src/**/model/*
+!src/**/model/.gitkeep
 src/**/annotations/
 src/**/dataset_catalogs/
 src/**/images/
