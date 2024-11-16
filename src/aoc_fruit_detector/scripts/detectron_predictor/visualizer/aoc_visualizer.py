@@ -19,6 +19,7 @@ class AOCVisualizer(Visualizer):
 
         self.category_ids = category_ids
         self.colours = colours
+        self.alpha = 0.3
         if masks:
             self.alpha = 1.0
 
