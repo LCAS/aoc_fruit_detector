@@ -2,7 +2,6 @@
 Started by: Usman Zahidi (uzahidi@lincoln.ac.uk) {08/11/24}
 
 """
-from reportlab.graphics.widgets.grids import centroid
 from skimage.transform import warp_polar
 from skimage.registration import phase_cross_correlation
 import numpy as np
@@ -58,7 +57,7 @@ class FruitOrientation():
             raise Exception(e)
 
     @staticmethod
-    def get_vector_from_angle(vector1, vector2,axis):
+    def get_angle_from_vector(vector1, vector2,axis):
 
         unit_vector1 = vector1 / np.linalg.norm(vector1)
         unit_vector2 = vector2 / np.linalg.norm(vector2)
@@ -67,8 +66,8 @@ class FruitOrientation():
         dot_product_vector2 = np.dot(unit_vector2, unit_axis)
         angle_vector1 = np.arccos(dot_product_vector1)
         angle_vector2 = np.arccos(dot_product_vector2)
-        angle_degrees_vector1=360 * angle_vector1 / (2 * np.pi)
-        angle_degrees_vector2 = 360 * angle_vector2 / (2 * np.pi)
+        angle_degrees_vector1=180 * angle_vector1/np.pi
+        angle_degrees_vector2 = 180 * angle_vector2/np.pi
         #UZ: if first eigenvector's unit vector is a gravity anomaly then switch to next
         if (angle_degrees_vector1<=90):
             return angle_degrees_vector1
@@ -92,7 +91,7 @@ class FruitOrientation():
             pca0 = eigenvectors[:, 0] * eigenvalues[0] ** 0.5 * 1
             pca1 = eigenvectors[:, 1] * eigenvalues[1] ** 0.5 * -1      #mask negative x-axis, as we're following right-hand rule
             y_axis = [0, -1]                                            # euclidean -y-axis is y-axis in image coordinate
-            return round(FruitOrientation.get_vector_from_angle(pca0,pca1, y_axis),3),centroid
+            return round(FruitOrientation.get_angle_from_vector(pca0,pca1, y_axis),3),centroid
         else:
             return None
 
