@@ -1,15 +1,18 @@
 # Install external repos 
 COPY .devcontainer/repos ${COLCON_WS}/src/repos
 
-RUN apt-get update && \
-    apt-get install -y libcairo2 libcairo2-dev pkg-config && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -qq -y --no-install-recommends \
+    ros-humble-rmw-cyclonedds-cpp \
+    ros-humble-cyclonedds \
+    ros-humble-cv-bridge \
+    ros-humble-rviz2 \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN pip install meson meson-python
 
 # Get the requirements file
 COPY requirements.txt ${COLCON_WS}/src/requirements.txt
-RUN pip install -r ${COLCON_WS}/src/requirements.txt
+RUN pip install -r ${COLCON_WS}/src/requirements.txt && rm ${COLCON_WS}/src/requirements.txt
 
 USER $USER
 

@@ -23,7 +23,7 @@
 	// Run commands after the container is created for initial setup
 	// Here, the post-create command will build the workspace with `colcon build`.
 	// If any packages fail to build, the process will continue for faster setup.
-	// "postCreateCommand": "sudo src/fruit_detector_ros2_pkg/.devcontainer/scripts/post-create.sh'",
+	// "postCreateCommand": "sudo src/aoc_fruit_detector/.devcontainer/scripts/post-create.sh'",
 
 	// Define environment variables to facilitate mounting local source code
 	"remoteEnv": {

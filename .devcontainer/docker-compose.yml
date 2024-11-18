@@ -38,7 +38,7 @@ services:
     volumes:
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
-      - ../:/home/ros/fruit_detector_ws/src/fruit_detector_ros2_pkg:rw
+      - ../:/home/ros/fruit_detector_ws/src/aoc_fruit_detector:rw
       - /media:/media:rw
 
 networks:
