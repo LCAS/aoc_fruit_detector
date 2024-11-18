@@ -1,6 +1,6 @@
 # syntax = devthefuture/dockerfile-x
 
-ARG BASE_IMAGE=lcas.lincoln.ac.uk/lcas/ros:jammy-humble-cuda12.2-opengl
+ARG BASE_IMAGE=lcas.lincoln.ac.uk/lcas/ros:jammy-humble-cuda11.8-opengl
 ############################################################################################################
 FROM ${BASE_IMAGE} as base
 
