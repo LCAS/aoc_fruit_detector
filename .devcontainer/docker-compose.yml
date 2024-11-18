@@ -3,7 +3,7 @@ services:
   fruit_detector:
     labels:
       - deploy.user=${USER}
-    image: lcas.lincoln.ac.uk/lcas/ros:jammy-humble-cuda12.2-opengl
+    image: lcas.lincoln.ac.uk/lcas/ros:jammy-humble-cuda11.8-opengl
     build:
       dockerfile: .devcontainer/Dockerfile
       context: ..
