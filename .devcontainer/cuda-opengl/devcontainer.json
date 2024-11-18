@@ -50,9 +50,9 @@
 	},
 
 	// Define minimum requirements for the host machine when running this container
-	"hostRequirements": {
-		"gpu": "optional",  // GPU support is optional, useful for CUDA if available
-		"cpus": 2,  // Minimum 2 CPU cores recommended
-		"memory": "8gb"  // Minimum 8GB RAM recommended
-	}
+	// "hostRequirements": {
+	// 	"gpu": "optional",  // GPU support is optional, useful for CUDA if available
+	// 	"cpus": 2,  // Minimum 2 CPU cores recommended
+	// 	"memory": "8gb"  // Minimum 8GB RAM recommended
+	// }
 }
