@@ -8,7 +8,10 @@ RUN apt-get update \
     python3-pip \
     python3-rosdep \
     python3-debian \
+    python3-dev \
+    python3-opencv \
     libsystemd-dev \
+    libgl1-mesa-glx \
     unattended-upgrades \
     usb-creator-gtk \
     libcups2-dev \
@@ -17,5 +20,5 @@ RUN apt-get update \
     ninja-build && \
     rm -rf /var/lib/apt/lists/*
 
-# Remove unnecessary files or temporary files created during the setup
-RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# Set Python3 as default
+RUN ln -s /usr/bin/python3 /usr/bin/python
