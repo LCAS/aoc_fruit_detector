@@ -2,7 +2,7 @@
 
 Instance segmentation of a scene and output Mask-RCNN predictions as images and json message/file (Agri-OpenCore)
 
-![Example images](./src/aoc_fruit_detector/scripts/data/figure/output_fig.png)
+![Example images](./scripts/data/figure/output_fig.png)
 
 ## Installation and Requirements
 
