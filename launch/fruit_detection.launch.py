@@ -37,7 +37,7 @@ def generate_launch_description():
         cmd=['python3', '-O', fruit_detection_script_installed,
             '--ros-args',
             '--param', ['constant_depth_value:=', LaunchConfiguration('constant_depth_value')],
-            '--remap', '/camera/image_raw:=/zed/zed_node/rgb_raw/image_raw_color', # /flir_camera/image_raw or /front_camera/image_raw
+            '--remap', '/camera/image_raw:=/zed/zed_node/rgb_raw/image_raw_color', # /zed/zed_node/rgb_raw/image_raw_color or /flir_camera/image_raw or /front_camera/image_raw
             '--remap', '/camera/depth:=/zed/zed_node/depth/depth_registered', # /zed/zed_node/depth/depth_registered or /front_camera/depth
             '--remap', '/camera/camera_info:=/flir_camera/camera_info'
             ],
@@ -63,6 +63,6 @@ def generate_launch_description():
     return LaunchDescription([
         declare_constant_depth_value,
         fruit_detection_node,
-        static_transform_publisher_#,
-        # rviz_node
+        static_transform_publisher_,
+        rviz_node
     ])
