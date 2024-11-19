@@ -1,46 +1,58 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
-{
-	"name": "L-CAS Humble CUDA-OpenGL Devcontainer",
-	"build": {
-		"dockerfile": "../Dockerfile",
-		"args": {
-			"BASE_IMAGE": "lcas.lincoln.ac.uk/lcas/ros:jammy-humble-cuda11.8-opengl"
-		},
-		"context": "../.."
-	},
+// This file configures a Development Container for use with VS Code.
+// For detailed format options, refer to https://aka.ms/devcontainer.json.
+// For configuration options, refer to https://github.com/devcontainers/templates/tree/main/src/ubuntu
 
-	"forwardPorts": [5801],
+{
+	// Define the container name for easy identification
+	"name": "L-CAS Humble CUDA-OpenGL Devcontainer",
+	
+	// Specify the Docker Compose file(s) required to set up the dev container
+	"dockerComposeFile": ["../docker-compose.yml"],
+	"service": "fruit_detector",  // Define the main service to use in the container
+	"workspaceFolder": "/home/ros/fruit_detector_ws/",  // Path to the workspace within the container
+
+	// Forward specific ports from the container to the host machine
+	"forwardPorts": [5801],  // Port for remote desktop access
 	"portsAttributes": {
 		"5801": {
 			"label": "desktop",
-			"onAutoForward": "openBrowser"
+			"onAutoForward": "openBrowser"  // Automatically opens the desktop view in a browser
 		}
 	},
 
-	// Use 'postCreateCommand' to run commands after the container is created.
-	// Here we run `colcon build` to build the workspace initially, (to speed up later builds), and we keep going if it fails for some packages to get as much compiled as possible
-	"postCreateCommand": "/opt/entrypoint.sh /bin/true; .devcontainer/post-create.sh",
+	// Run commands after the container is created for initial setup
+	// Here, the post-create command will build the workspace with `colcon build`.
+	// If any packages fail to build, the process will continue for faster setup.
+	// "postCreateCommand": "sudo src/aoc_fruit_detector/.devcontainer/scripts/post-create.sh'",
 
-	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	"remoteUser": "ros",
-	"updateRemoteUserUID": true, // ensure internal user has the same UID as the host user and update file permissions
+	// Define environment variables to facilitate mounting local source code
+	"remoteEnv": {
+		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"  // Sets local workspace path in the container
+	},
+	
+	"remoteUser": "ros",  // Set the default user inside the container
+	"updateRemoteUserUID": true,  // Align container user UID with host user for permission consistency
+	"shutdownAction": "stopCompose",  // Gracefully stop the Compose environment on shutdown
+
+	// VS Code customizations: Install specific extensions on container startup
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"ms-python.python",
-				"GitHub.vscode-pull-request-github",
-				"ms-vscode.cpptools",
-				"JaehyunShim.vscode-ros2",
-				"nonanonno.vscode-ros2",
-				"deitry.colcon-helper",
-				"github.vscode-github-actions"
+				"ms-python.python",  // Python support
+				"GitHub.vscode-pull-request-github",  // GitHub pull request and issue support
+				"ms-vscode.cpptools",  // C++ support
+				"JaehyunShim.vscode-ros2",  // ROS2 support and syntax highlighting
+				"nonanonno.vscode-ros2",  // Additional ROS2 tools
+				"deitry.colcon-helper",  // Helper tools for Colcon (ROS build tool)
+				"github.vscode-github-actions"  // GitHub Actions support
 			]
 		}
 	},
-	"hostRequirements": {
-		"gpu": "optional",
-		"cpus": 2,
-		"memory": "8gb"
-	}
+
+	// Define minimum requirements for the host machine when running this container
+	// "hostRequirements": {
+	// 	"gpu": "optional",  // GPU support is optional, useful for CUDA if available
+	// 	"cpus": 2,  // Minimum 2 CPU cores recommended
+	// 	"memory": "8gb"  // Minimum 8GB RAM recommended
+	// }
 }

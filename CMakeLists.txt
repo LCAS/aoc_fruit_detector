@@ -32,6 +32,11 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+install(DIRECTORY
+  scripts/detectron_predictor scripts/detectron_trainer scripts/learner_predictor scripts/learner_trainer scripts/utils
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 foreach (dir launch config scripts/data scripts/model)
     install(DIRECTORY ${dir} DESTINATION share/${PROJECT_NAME})
 endforeach(dir)

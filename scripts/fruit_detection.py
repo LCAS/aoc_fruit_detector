@@ -227,8 +227,8 @@ class FruitDetectionNode(Node):
         x = int(pose2d.x)
         y = int(pose2d.y)
 
-        if 0 <= x < height and 0 <= y < width:
-            depth_values_at_pose = depth_mask[x, y, :]
+        if 0 <= x < width and 0 <= y < height:
+            depth_values_at_pose = depth_mask[y, x, :]
             non_zero_depth_values = depth_values_at_pose[depth_values_at_pose > 0]
 
             if non_zero_depth_values.size > 0:
@@ -237,7 +237,7 @@ class FruitDetectionNode(Node):
                 closest_depth_value = 0.0 
         else:
             closest_depth_value = 0.0
-            self.get_logger().warn(f'Out of size x:{x}, height:{height}, y:{y} and width:{width}')
+            self.get_logger().warn(f'Out of size x:{x}, width:{width}, y:{y} and height:{height}')
         
         ray = self.back_project_2d_to_3d_ray(pose2d.x, pose2d.y)
         p_3d_camera_frame = self.compute_3d_point_from_depth(ray, closest_depth_value)
