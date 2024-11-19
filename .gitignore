@@ -52,13 +52,12 @@ qtcreator-*
 CATKIN_IGNORE
 
 # Detector specific files
-src/**/model/*
-!src/**/model/.gitkeep
-src/**/annotations/
-src/**/dataset_catalogs/
-src/**/images/
-src/**/tomato_dataset/
-src/**/output/
-src/**/bag/
+scripts/**/model/*
+!scripts/**/model/.gitkeep
+scripts/**/annotations/
+scripts/**/dataset_catalogs/
+scripts/**/images/
+scripts/**/tomato_dataset/
+scripts/**/output/
+scripts/**/bag/
 
-src/**/detectron2
