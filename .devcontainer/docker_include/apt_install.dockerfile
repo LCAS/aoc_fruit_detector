@@ -20,5 +20,7 @@ RUN apt-get update \
     ninja-build && \
     rm -rf /var/lib/apt/lists/*
 
-# Set Python3 as default
-RUN ln -s /usr/bin/python3 /usr/bin/python
+# Set Python3 as default (if there is no link before)
+#RUN ln -s /usr/bin/python3 /usr/bin/python
+RUN if [ ! -e /usr/bin/python ]; then ln -s /usr/bin/python3 /usr/bin/python; fi
+
