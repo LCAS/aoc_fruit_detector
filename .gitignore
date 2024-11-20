@@ -58,6 +58,7 @@ scripts/**/annotations/
 scripts/**/dataset_catalogs/
 scripts/**/images/
 scripts/**/tomato_dataset/
+scripts/**/strawberry_dataset/
 scripts/**/output/
 scripts/**/bag/
 
