@@ -3,7 +3,7 @@ Started by: Usman Zahidi (uz) {20/08/24}
 """
 # general imports
 import os,logging,traceback
-import shutil, requests,zipfile
+import shutil, requests, zipfile
 
 # UZ:utils for download to serve both trainer and predictor
 
