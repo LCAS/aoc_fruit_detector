@@ -88,6 +88,10 @@ class FruitDetectionNode(Node):
             qos_profile
         )
 
+        self.draw_centroid = False
+        self.draw_mask = False
+        self.draw_cf = True
+
     def find_data_folder_config(self,search_dir='.'):
         for root, dirs, _ in os.walk(search_dir):
             if 'aoc_fruit_detector' in dirs:
@@ -486,6 +490,7 @@ class FruitDetectionNode(Node):
         for fruit in fruits_info.fruits:
             x = int(fruit.pose2d.x)
             y = int(fruit.pose2d.y)
+            theta = np.deg2rad(fruit.pose2d.theta)
             
             # Set color based on ripeness
             if fruit.ripeness_level < 0.5:
@@ -493,17 +498,40 @@ class FruitDetectionNode(Node):
             else:
                 color = (0, 0, 255)  # Red for ripe
             
-            # Scale the radius based on the image size (e.g., a base of 10 pixels scaled)
-            radius = int(10 * scale_factor)
+            if self.draw_centroid == True:
+                # Point the centroid (origin of the fruit)
+                radius = int(10 * scale_factor)
+                cv2.circle(cv_image, (x, y), radius, color, -1)
             
-            # Draw the circle marker
-            cv2.circle(cv_image, (x, y), radius, color, -1)
-            
-            # Draw the mask outline
-            mask_points = np.array(fruit.mask2d, dtype=np.int32).reshape((-1, 2))  # Convert 1D mask to Nx2 format
-            
-            # Draw the polygon mask outline
-            cv2.polylines(cv_image, [mask_points], isClosed=True, color=color, thickness=5)
+            if self.draw_mask == True:
+                # Draw the polygon mask outline
+                mask_points = np.array(fruit.mask2d, dtype=np.int32).reshape((-1, 2))  # Convert 1D mask to Nx2 format
+                cv2.polylines(cv_image, [mask_points], isClosed=True, color=color, thickness=5)
+
+            if self.draw_cf == True:
+                # Draw fruit coordinate frame (cf)
+                color_x = (0, 0, 255) # Red for x axis
+                color_y = (0, 255, 0)  # Green for y axis
+                arrow_length = int(30 * scale_factor)
+                end_x_x = int(x + arrow_length * np.cos(theta))  # Calculate endpoint x
+                end_y_x = int(y + arrow_length * np.sin(theta))  # Calculate endpoint y
+                cv2.arrowedLine(cv_image, (x, y), (end_x_x, end_y_x), color_x, thickness=2, tipLength=0.3)
+                end_x_y = int(x + arrow_length * np.cos(theta+np.pi/2))  # Calculate endpoint x
+                end_y_y = int(y + arrow_length * np.sin(theta+np.pi/2))  # Calculate endpoint y
+                cv2.arrowedLine(cv_image, (x, y), (end_x_y, end_y_y), color_y, thickness=2, tipLength=0.3)
+                text_position = (end_x_x + 5, end_y_x - 5)  # Offset text slightly from the arrow tip
+                font_scale = 1.5 * scale_factor  # Adjust text size based on image size
+                font_thickness = max(1, int(2 * scale_factor))  # Scale text thickness
+                cv2.putText(
+                    cv_image, 
+                    f"{fruit.pose2d.theta:.1f}",  # Format theta to 1 decimal place
+                    text_position, 
+                    cv2.FONT_HERSHEY_SIMPLEX, 
+                    font_scale, 
+                    (255, 0, 0),  # blue text
+                    thickness=font_thickness, 
+                    lineType=cv2.LINE_AA
+                )
 
         # Convert the modified image back to a ROS image message
         composed_image = self.bridge.cv2_to_imgmsg(cv_image, encoding='bgr8')
