@@ -2,7 +2,6 @@
 #When executed in Optimized mode, the program will neither output predicted images with bounding box/mask overlays nor it will write a respective json file. Moreover, the debug traces will not print at error event. In this mode json will be output in a variable.
 
 # UZ: After training, the newly trained model should be place in the model folder, it should be renamed to aoc_model.pth 
-
 datasets:
   train_dataset_name: 'aoc_train_dataset'
   test_dataset_name: 'aoc_test_dataset'
@@ -39,3 +38,5 @@ settings:
   rename_pred_images: false #rename the predicted images in img_000001.png like format
   orientation_method: 'PCA'  #choose between PCA or LOG_POLAR, PCA does not need reference mask
   bbox: false
+
+ 

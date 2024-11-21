@@ -1,0 +1,8 @@
+fruit_detector:
+  ros__parameters:
+    min_depth: 0.1
+    max_depth: 15.0
+    constant_depth_value: 1.0
+    fruit_type: "strawberry"
+    pose3d_frame: ''
+    verbose: [False, False, True, True]
