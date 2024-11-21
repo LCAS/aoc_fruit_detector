@@ -7,6 +7,7 @@ from sensor_msgs.msg import Image, CameraInfo
 from geometry_msgs.msg import Pose2D, Pose, PoseStamped
 from aoc_fruit_detector.msg import FruitInfoMessage, FruitInfoArray
 from visualization_msgs.msg import Marker, MarkerArray
+import argparse
 #from predictor import call_predictor
 
 import os, yaml, cv2
@@ -23,16 +24,25 @@ import image_geometry
 from ament_index_python.packages import get_package_share_directory, PackageNotFoundError
 
 class FruitDetectionNode(Node):
-    def __init__(self):
-        super().__init__('fruit_detection')
-        # Create a publisher for the custom message type
-        self.publisher_fruit = self.create_publisher(FruitInfoArray, 'fruit_info', 5)
-        self.publisher_comp = self.create_publisher(Image, 'image_composed', 5)
-        self.publisher_3dmarkers = self.create_publisher(MarkerArray, 'fruit_markers', 5)
+    def __init__(self, non_ros_config_path):
+        super().__init__('fruit_detector')
+
+        # Declare parameters
+        self.declare_parameters(
+            namespace='',
+            parameters=[
+                ('min_depth', 0.1),
+                ('max_depth', 15.0),
+                ('constant_depth_value', 1.0),
+                ('fruit_type', "strawberry"),
+                ('pose3d_frame', ''),
+                ('verbose', [False, False, True, True])
+            ]
+        )
+
         self.package_name = 'aoc_fruit_detector'
-        config_path = self.get_parameters_file()
-        if config_path:
-            with open(config_path, 'r') as file:
+        if non_ros_config_path:
+            with open(non_ros_config_path, 'r') as file:
                 config_data = yaml.safe_load(file)
                 
                 for section in ['files', 'directories']:
@@ -43,29 +53,33 @@ class FruitDetectionNode(Node):
                                 config_data[section][key] = os.path.join(package_share_directory, path.lstrip('./'))
 
                 self.det_predictor = DetectronPredictor(config_data)
-
-                # Declare parameters for min_depth and max_depth
-                self.declare_parameter('min_depth', 0.1)  # Default value
-                self.declare_parameter('max_depth', 15.0)  # Default value
-                self.min_depth = self.get_parameter('min_depth').value
-                self.max_depth = self.get_parameter('max_depth').value
         else:
             raise FileNotFoundError(f"No config file found in any ' {self.package_name}/config/' folder within {os.getcwd()}")
+
+        # Get parameter values from network
+        self.min_depth = self.get_parameter('min_depth').value
+        self.max_depth = self.get_parameter('max_depth').value
+        self.constant_depth_value = self.get_parameter('constant_depth_value').value
+        if self.get_parameter('fruit_type').value == "tomato":
+            self.tomato = True
+        elif self.get_parameter('fruit_type').value == "strawberry":
+            self.tomato = False
+        self.pose3d_frame = self.get_parameter('pose3d_frame').value
+
+        self.draw_centroid = self.get_parameter('verbose').value[0]
+        self.draw_mask = self.get_parameter('verbose').value[1]
+        self.draw_cf = self.get_parameter('verbose').value[2]
+        self.add_text = self.get_parameter('verbose').value[3]
 
         self.bridge = CvBridge()
         self.camera_model = image_geometry.PinholeCameraModel()
         self.set_default_camera_model() # in case camera_info message not available 
         
+        # Declare subscribers
         qos_profile = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
             depth=1
         )
-
-        self.declare_parameter('constant_depth_value', 1.0)
-        self.constant_depth_value = self.get_parameter('constant_depth_value').value
-
-        self.tomato = False
-        self.pose3d_frame = ''
 
         self.image_sub = self.create_subscription(
             Image,
@@ -88,21 +102,12 @@ class FruitDetectionNode(Node):
             qos_profile
         )
 
-        self.draw_centroid = False
-        self.draw_mask = False
-        self.draw_cf = True
-
-    def find_data_folder_config(self,search_dir='.'):
-        for root, dirs, _ in os.walk(search_dir):
-            if 'aoc_fruit_detector' in dirs:
-                data_folder = os.path.join(root, 'aoc_fruit_detector')
-                config_path = os.path.join(data_folder, 'config', 'parameters.yaml')
-                # Check if parameters.yaml exists in the aoc_fruit_detector/config folder
-                if os.path.exists(config_path):
-                    return config_path
-        return None
+        # Create and declare publishers
+        self.publisher_fruit = self.create_publisher(FruitInfoArray, 'fruit_info', 5)
+        self.publisher_comp = self.create_publisher(Image, 'image_composed', 5)
+        self.publisher_3dmarkers = self.create_publisher(MarkerArray, 'fruit_markers', 5)
     
-    def get_parameters_file(self):
+    def get_non_ros_config_file(self, file_path):
         try:
             package_share_directory = get_package_share_directory(self.package_name)
         except PackageNotFoundError:
@@ -116,7 +121,7 @@ class FruitDetectionNode(Node):
         
         return config_path
 
-    def compute_pose2d_(self, annotation_id, pose_dict):
+    def compute_pose2d(self, annotation_id, pose_dict):
         """
         Retrieve Pose2D from the pose_dict using the fruit_id.
 
@@ -139,43 +144,6 @@ class FruitDetectionNode(Node):
             pose2d.x = float('nan')
             pose2d.y = float('nan')
             pose2d.theta = float('nan')
-        return pose2d
-    
-    def compute_pose2d(self, mask, swap_xy=False):
-        """Calculate Pose2D from the mask (segmentation coordinates)."""
-        
-        if swap_xy:
-            # Swap x and y if needed
-            x_coords = np.array(mask[1::2])  # Treat every 2nd element starting from index 1 as x coordinates
-            y_coords = np.array(mask[0::2])  # Treat every 2nd element starting from index 0 as y coordinates
-        else:
-            x_coords = np.array(mask[0::2])  # Every 2nd element starting from index 0 (x coordinates)
-            y_coords = np.array(mask[1::2])  # Every 2nd element starting from index 1 (y coordinates)
-
-        # Filter out outliers using a simple statistical approach (remove points too far from the median)
-        x_median = np.median(x_coords)
-        y_median = np.median(y_coords)
-
-        # Calculate distances from the median and define a threshold (e.g., 1.5 * interquartile range)
-        x_distances = np.abs(x_coords - x_median)
-        y_distances = np.abs(y_coords - y_median)
-
-        x_iqr = np.percentile(x_coords, 75) - np.percentile(x_coords, 25)
-        y_iqr = np.percentile(y_coords, 75) - np.percentile(y_coords, 25)
-
-        x_threshold = 1.5 * x_iqr
-        y_threshold = 1.5 * y_iqr
-
-        # Filter points that are within the threshold (outliers removed)
-        filtered_x_coords = x_coords[x_distances < x_threshold]
-        filtered_y_coords = y_coords[y_distances < y_threshold]
-
-        # Calculate the centroid from the filtered points
-        pose2d = Pose2D()
-        pose2d.x = np.mean(filtered_x_coords) if len(filtered_x_coords) > 0 else x_median  # Centroid X
-        pose2d.y = np.mean(filtered_y_coords) if len(filtered_y_coords) > 0 else y_median  # Centroid Y
-        pose2d.theta = 0.0  # Assuming rotation is unknown
-
         return pose2d
     
     def publish_fruit_markers(self, fruits_msg):
@@ -460,7 +428,7 @@ class FruitDetectionNode(Node):
                 fruit_msg.bbox = bbox
                 fruit_msg.bvol = bbox
                 fruit_msg.mask2d = segmentation
-                fruit_msg.pose2d = self.compute_pose2d_(fruit_id, pose_dict)
+                fruit_msg.pose2d = self.compute_pose2d(fruit_id, pose_dict)
                 fruit_msg.mask3d = segmentation
                 fruit_msg.pose3d = self.compute_pose3d(fruit_msg.pose2d, depth_mask)
                 fruit_msg.confidence = float(confidence_dict.get(fruit_id, '-1.0'))
@@ -519,6 +487,8 @@ class FruitDetectionNode(Node):
                 end_x_y = int(x + arrow_length * np.cos(theta+np.pi/2))  # Calculate endpoint x
                 end_y_y = int(y + arrow_length * np.sin(theta+np.pi/2))  # Calculate endpoint y
                 cv2.arrowedLine(cv_image, (x, y), (end_x_y, end_y_y), color_y, thickness=2, tipLength=0.3)
+
+            if self.add_text == True:
                 text_position = (end_x_x + 5, end_y_x - 5)  # Offset text slightly from the arrow tip
                 font_scale = 1.5 * scale_factor  # Adjust text size based on image size
                 font_thickness = max(1, int(2 * scale_factor))  # Scale text thickness
@@ -538,8 +508,12 @@ class FruitDetectionNode(Node):
         return composed_image
 
 def main(args=None):
-    rclpy.init(args=args)
-    node = FruitDetectionNode()
+    parser = argparse.ArgumentParser(description='Fruit Detector Node')
+    parser.add_argument('--config-file', required=True, help='Path to non-ROS parameters YAML file')
+    non_ros_args, ros_args = parser.parse_known_args()
+
+    rclpy.init(args=ros_args)
+    node = FruitDetectionNode(non_ros_config_path=non_ros_args.config_file)
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
