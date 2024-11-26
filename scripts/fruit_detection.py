@@ -36,7 +36,7 @@ class FruitDetectionNode(Node):
                 ('constant_depth_value', 1.0),
                 ('fruit_type', "strawberry"),
                 ('pose3d_frame', ''),
-                ('verbose', [False, False, True, True])
+                ('verbose', [False, False, False, True, True])
             ]
         )
 
@@ -67,9 +67,10 @@ class FruitDetectionNode(Node):
         self.pose3d_frame = self.get_parameter('pose3d_frame').value
 
         self.draw_centroid = self.get_parameter('verbose').value[0]
-        self.draw_mask = self.get_parameter('verbose').value[1]
-        self.draw_cf = self.get_parameter('verbose').value[2]
-        self.add_text = self.get_parameter('verbose').value[3]
+        self.draw_bbox = self.get_parameter('verbose').value[1]
+        self.draw_mask = self.get_parameter('verbose').value[2]
+        self.draw_cf = self.get_parameter('verbose').value[3]
+        self.add_text = self.get_parameter('verbose').value[4]
 
         self.bridge = CvBridge()
         self.camera_model = image_geometry.PinholeCameraModel()
@@ -106,20 +107,6 @@ class FruitDetectionNode(Node):
         self.publisher_fruit = self.create_publisher(FruitInfoArray, 'fruit_info', 5)
         self.publisher_comp = self.create_publisher(Image, 'image_composed', 5)
         self.publisher_3dmarkers = self.create_publisher(MarkerArray, 'fruit_markers', 5)
-    
-    def get_non_ros_config_file(self, file_path):
-        try:
-            package_share_directory = get_package_share_directory(self.package_name)
-        except PackageNotFoundError:
-            raise FileNotFoundError("Package '{self.package_name}' not found in the workspace.")
-        
-        config_path = os.path.join(package_share_directory, 'config', 'parameters.yaml')
-        
-        # Check if parameters.yaml exists at the expected location
-        if not os.path.exists(config_path):
-            raise FileNotFoundError(f"No config file found at '{config_path}'")
-        
-        return config_path
 
     def compute_pose2d(self, annotation_id, pose_dict):
         """
@@ -139,6 +126,7 @@ class FruitDetectionNode(Node):
             pose2d.x = float(centroid[0])  # Centroid X
             pose2d.y = float(centroid[1])  # Centroid Y
             pose2d.theta = orientation  # Orientation (theta) in degree
+            #self.get_logger().info(f'Fruit orientation (deg): {pose2d.theta}')
         else:
             # Default values
             pose2d.x = float('nan')
@@ -466,17 +454,24 @@ class FruitDetectionNode(Node):
             else:
                 color = (0, 0, 255)  # Red for ripe
             
-            if self.draw_centroid == True:
+            if self.draw_centroid:
                 # Point the centroid (origin of the fruit)
                 radius = int(10 * scale_factor)
                 cv2.circle(cv_image, (x, y), radius, color, -1)
             
-            if self.draw_mask == True:
+            if self.draw_mask:
                 # Draw the polygon mask outline
                 mask_points = np.array(fruit.mask2d, dtype=np.int32).reshape((-1, 2))  # Convert 1D mask to Nx2 format
-                cv2.polylines(cv_image, [mask_points], isClosed=True, color=color, thickness=5)
+                cv2.polylines(cv_image, [mask_points], isClosed=True, color=color, thickness=2)
+            
+            if self.draw_bbox:
+                x_min, y_min, width, height = map(int, fruit.bbox)
+        
+                x_max = x_min + width
+                y_max = y_min + height
+                cv2.rectangle(cv_image, (x_min, y_min), (x_max, y_max), color, thickness=2)
 
-            if self.draw_cf == True:
+            if self.draw_cf:
                 # Draw fruit coordinate frame (cf)
                 color_x = (0, 0, 255) # Red for x axis
                 color_y = (0, 255, 0)  # Green for y axis
@@ -488,7 +483,7 @@ class FruitDetectionNode(Node):
                 end_y_y = int(y + arrow_length * np.sin(theta+np.pi/2))  # Calculate endpoint y
                 cv2.arrowedLine(cv_image, (x, y), (end_x_y, end_y_y), color_y, thickness=2, tipLength=0.3)
 
-            if self.add_text == True:
+            if self.add_text:
                 text_position = (end_x_x + 5, end_y_x - 5)  # Offset text slightly from the arrow tip
                 font_scale = 1.5 * scale_factor  # Adjust text size based on image size
                 font_thickness = max(1, int(2 * scale_factor))  # Scale text thickness
