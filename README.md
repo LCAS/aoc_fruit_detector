@@ -6,6 +6,8 @@ Instance segmentation of a scene and output Mask-RCNN predictions as images and 
 
 ## Installation, Requirements and Running
 
+### Without Docker Installation
+
 The docker container automatically installs all required dependencies. The main dependencises are listed below. However, without dockerisation, the following required packages or check/install required versions should be installed from requirements.txt file.
 
 `python3` `torchvision` `pickle` `numpy` `opencv-python` `cv-bridge` `scikit-image` `matplotlib`
