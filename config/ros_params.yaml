@@ -5,4 +5,6 @@ fruit_detector:
     constant_depth_value: 1.0
     fruit_type: "strawberry"
     pose3d_frame: ''
-    verbose: [False, True, True, False, False] # To draw [centroid, bbox, mask, coordinate frames, text]
+    verbose: [False, True, True, False, False] # To draw [centroid, bbox, mask, coordinate frames, text] annotations on image
+    pub_verbose: True # To publish annotated image
+    pub_markers: False

@@ -37,6 +37,8 @@ class FruitDetectionNode(Node):
                 ('fruit_type', "strawberry"),
                 ('pose3d_frame', ''),
                 ('verbose', [False, False, False, True, True])
+                ('pub_verbose', False)
+                ('pub_markers', False)
             ]
         )
 
@@ -71,6 +73,9 @@ class FruitDetectionNode(Node):
         self.draw_mask = self.get_parameter('verbose').value[2]
         self.draw_cf = self.get_parameter('verbose').value[3]
         self.add_text = self.get_parameter('verbose').value[4]
+
+        self.pub_verbose = self.get_parameter('pub_verbose').value
+        self.pub_markers = self.get_parameter('pub_markers').value
 
         self.bridge = CvBridge()
         self.camera_model = image_geometry.PinholeCameraModel()
@@ -427,12 +432,14 @@ class FruitDetectionNode(Node):
                 #self.get_logger().info(f'Publishing pose of fruit: {fruit_msg.pose3d}')
                 #self.get_logger().info(f'Depth values: {depth_mask}')
                 fruits_msg.fruits.append(fruit_msg)
-            fruits_msg.rgb_image = rgb_msg        # Assign the current RGB image
-            fruits_msg.depth_image = depth_msg    # Assign the stored depth image
-            fruits_msg.rgb_image_composed = self.add_markers_on_image(self.cv_image, fruits_msg)
-            self.publish_fruit_markers(fruits_msg)
+            if self.pub_verbose:
+                fruits_msg.rgb_image = rgb_msg        # Assign the current RGB image
+                fruits_msg.depth_image = depth_msg    # Assign the stored depth image
+                fruits_msg.rgb_image_composed = self.add_markers_on_image(self.cv_image, fruits_msg)
+                self.publisher_comp.publish(fruits_msg.rgb_image_composed)
+            if self.pub_markers:
+                self.publish_fruit_markers(fruits_msg)
             self.publisher_fruit.publish(fruits_msg)
-            self.publisher_comp.publish(fruits_msg.rgb_image_composed)
             self.get_logger().info("Published")
         except CvBridgeError as e:
             self.get_logger().error(f'CvBridge Error: {e}')
