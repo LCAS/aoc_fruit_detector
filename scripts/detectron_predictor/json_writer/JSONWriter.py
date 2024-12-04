@@ -122,7 +122,7 @@ class JSONWriter(Visualizer):
         )
         self._instance_mode = instance_mode
 
-    def create_prediction_json(self, predictions, output_json_file_path,input_file_names,categories_info,image_size,orientation_method,ref_mask=None,image_id=1):
+    def create_prediction_json(self, predictions, output_json_file_path,input_file_names,categories_info,image_size,image_id=1):
 
         image_list = list()
         category_list = list()
@@ -147,7 +147,7 @@ class JSONWriter(Visualizer):
             image_list.append(pycococreatortools.create_image_info(image_id,filename,
             [self.output.height,self.output.width],datetime.datetime.utcnow().isoformat(' ')))
             ann_list,conf_list,orientation_list=self._convert_instance_predictions_to_annotations(predictions, input_file_name,
-                                                           output_json_file_path,image_size,orientation_method,ref_mask,image_id)
+                                                           output_json_file_path,image_size,image_id)
             image_id += 1
         dict_images         ={"images": image_list}
         dict_annotations    ={"annotations": ann_list}
@@ -172,7 +172,7 @@ class JSONWriter(Visualizer):
 
 
     def _convert_instance_predictions_to_annotations(self, predictions,image_filename="",
-                                             json_filename="",image_size=None,orientation_method='PCA',ref_mask=None,image_id=0)->None:
+                                             json_filename="",image_size=None,image_id=0)->None:
 
         boxes = predictions.pred_boxes if predictions.has("pred_boxes") else None
         classes = predictions.pred_classes if predictions.has("pred_classes") else None
@@ -204,8 +204,6 @@ class JSONWriter(Visualizer):
             image_id = image_id,
             classes = classes,
             image_size=image_size,
-            orientation_method=orientation_method,
-            ref_mask=ref_mask
         )
 
     def _overlay_instances(
@@ -219,9 +217,7 @@ class JSONWriter(Visualizer):
         image_filename="",
         image_id=0,
         classes=None,
-        image_size=None,
-        orientation_method=None,
-        ref_mask=None):
+        image_size=None):
 
         ann_list= list()
         conf_list=list()
@@ -274,11 +270,7 @@ class JSONWriter(Visualizer):
                 confidence_info = pycococreatortools.create_confidence_info(
                     self.annotation_id, image_id, category_info,label)
                 orientation_info = pycococreatortools.create_orientation_info(
-                    self.annotation_id, image_id, category_info, segment,orientation_method,ref_mask)
-
-                #def create_orientation_info(annotation_id, image_id, category_info, generic_mask, ref_mask,
-                #                            orientation_method)
-
+                    self.annotation_id, image_id, category_info, segment)
 
                 ann_list.append(annotation_info)
                 conf_list.append(confidence_info)

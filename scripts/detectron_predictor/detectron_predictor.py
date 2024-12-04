@@ -7,9 +7,7 @@ import os, pickle, logging,traceback
 import numpy
 # detectron imports
 from detectron2.config import get_cfg
-#from detectron2.data import Metadata
 from detectron2.engine.defaults import DefaultPredictor
-#from detectron2.data.catalog  import MetadataCatalog
 from detectron2 import model_zoo
 
 # project imports
@@ -19,7 +17,6 @@ from learner_predictor.learner_predictor import LearnerPredictor
 from utils.utils import LearnerUtils
 import cv2
 import numpy as np
-#import matplotlib.pyplot as plt
 
 
 logging.basicConfig(level=logging.WARNING, format='%(levelname)s: %(message)s')
@@ -42,8 +39,9 @@ class DetectronPredictor(LearnerPredictor):
         self.epochs                 = config_data['training']['epochs']
         self.download_assets        = config_data['settings']['download_assets']
         self.rename_pred_images     = config_data['settings']['rename_pred_images']
-        self.orientation_method     = config_data['settings']['orientation_method']
+        self.show_orientation       = config_data['settings']['show_orientation']
         self.bbox                   = config_data['settings']['bbox']
+        self.masks                  = config_data['settings']['segm_masks']
         self.list_category_ids      = list()
         self.colours                = None
 
@@ -99,7 +97,7 @@ class DetectronPredictor(LearnerPredictor):
             raise Exception(e)
         return data
 
-    def get_predictions_image(self, rgbd_image,output_json_file_path='',image_file_name='',sample_no=1,ref_mask=None):
+    def get_predictions_image(self, rgbd_image,output_json_file_path='',image_file_name='',sample_no=1):
         predicted_image=None
         depth_image = rgbd_image[:, :, 3]
         rgb_image = rgbd_image[:, :, :3].astype(np.uint8)
@@ -115,8 +113,9 @@ class DetectronPredictor(LearnerPredictor):
                                         instance_mode=self.instance_mode,
                                         colours=self.colours,
                                         category_ids=self.list_category_ids,
-                                        masks=True,
-                                        bbox=self.bbox
+                                        masks=self.masks,
+                                        bbox=self.bbox,
+                                        show_orientation=self.show_orientation
                                         )
                 drawn_predictions = vis_aoc.draw_instance_predictions(outputs["instances"].to("cpu"))
                 predicted_image = drawn_predictions.get_image()[:, :, ::-1].copy()
@@ -143,10 +142,11 @@ class DetectronPredictor(LearnerPredictor):
                     file_dir, f_name = os.path.split(image_file_name)
                     overlay_fName = os.path.join(pred_image_dir, f_name)
                 cv2.imwrite(overlay_fName, cv2.cvtColor(predicted_image, cv2.COLOR_BGR2RGB))
-                print(f"predicted image saved in output folder for file {overlay_fName}")
+                delta=str(end_time - start_time)
+                print(f"predicted image saved in output folder for file {overlay_fName}, Duration: {delta}")
             json_writer = JSONWriter(rgb_image, self.metadata[0])
             categories_info=self.metadata[1] # category info is saved as second list
-            predicted_json_ann=json_writer.create_prediction_json(predictions, output_json_file_path, image_file_name,categories_info,image_size,self.orientation_method,ref_mask,1)
+            predicted_json_ann=json_writer.create_prediction_json(predictions, output_json_file_path, image_file_name,categories_info,image_size,1)
             return predicted_json_ann,predicted_image,depth_masks
         except Exception as e:
             logging.error(e)
@@ -155,7 +155,6 @@ class DetectronPredictor(LearnerPredictor):
 
     def get_predictions_message(self, rgbd_image, image_id=0,ref_mask=None):
         predicted_image = None
-        self.segm_masks_only = None
         depth_image = rgbd_image[:, :, 3]
         rgb_image = rgbd_image[:, :, :3].astype(np.uint8)
         output_json_file_path=''
@@ -171,7 +170,8 @@ class DetectronPredictor(LearnerPredictor):
                                     instance_mode=self.instance_mode,
                                     colours=self.colours,
                                     category_ids=self.list_category_ids,
-                                    masks=self.segm_masks_only
+                                    masks=self.segm_masks_only,
+                                    show_orientation=self.show_orientation
                                     )
             drawn_predictions = vis_aoc.draw_instance_predictions(outputs["instances"].to("cpu"))
             predicted_image = drawn_predictions.get_image()[:, :, ::-1].copy()
@@ -179,7 +179,7 @@ class DetectronPredictor(LearnerPredictor):
             json_writer = JSONWriter(rgb_image, self.metadata[0])
             categories_info = self.metadata[1]  # category info is saved as second list
             predicted_json_ann = json_writer.create_prediction_json(predictions, output_json_file_path,
-                                                                    image_file_name, categories_info,image_size,self.orientation_method,ref_mask, image_id)
+                                                                    image_file_name, categories_info,image_size,image_id)
             return predicted_json_ann, predicted_image,depth_masks
         except Exception as e:
             logging.error(e)

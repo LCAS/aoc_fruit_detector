@@ -5,7 +5,7 @@ from itertools import groupby
 from skimage import measure
 from PIL import Image
 from pycocotools import mask
-from .fruit_orientation import FruitOrientation,OrientationMethod
+from .fruit_orientation import FruitOrientation
 
 
 convert = lambda text: int(text) if text.isdigit() else text.lower()
@@ -153,15 +153,12 @@ def create_confidence_info(annotation_id, image_id, category_info,confidence_sco
     "confidence": confidence_score}
     return confidence_info
 
-def create_orientation_info(annotation_id, image_id, category_info,generic_mask,orientation_method,ref_mask):
+def create_orientation_info(annotation_id, image_id, category_info,generic_mask):
     mask=generic_mask.mask
-    if (orientation_method.upper()==OrientationMethod.PCA.name):
-        orientation_angle,centroid=FruitOrientation.get_angle_pca(mask)
-    elif (orientation_method.upper()==OrientationMethod.LOG_POLAR.name):
-        orientation_angle,centroid = FruitOrientation.get_angle_logpolar(mask,ref_mask)
+    orientation_angle,centroid,_,_=FruitOrientation.get_angle_pca(mask)
     orientation_info = {"annotation_id": annotation_id,
     "image_id": image_id,
     "category_id": category_info["id"],
-    "orientation": orientation_angle,
-    "centroid":centroid}
+    "orientation": float(orientation_angle),
+    "centroid":list(centroid)}
     return orientation_info

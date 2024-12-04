@@ -1,11 +1,12 @@
 """
 Started by: Usman Zahidi (uz) {16/02/22}
-
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib as mpl
 import matplotlib.colors as mplc
+from ..json_writer.pycococreator.pycococreatortools.fruit_orientation import FruitOrientation
 
 # detectron2 imports
 from detectron2.utils.visualizer import Visualizer,ColorMode,VisImage
@@ -14,14 +15,18 @@ _SMALL_OBJECT_AREA_THRESH = 1000
 
 class AOCVisualizer(Visualizer):
 
-    def __init__(self, img_rgb, metadata=None, scale=1.0, instance_mode=ColorMode.SEGMENTATION,colours=None,category_ids=None,masks=None):
+    def __init__(self, img_rgb, metadata=None, scale=1.0, instance_mode=ColorMode.SEGMENTATION,colours=None,category_ids=None,masks=None,bbox=None,show_orientation=False):
         super(AOCVisualizer,self).__init__(img_rgb, metadata, scale, instance_mode)
 
         self.category_ids = category_ids
         self.colours = colours
-        self.alpha = 0.3
+        self.bbox=bbox
+        self.masks=masks
+        self.show_orientation=show_orientation
         if masks:
             self.alpha = 1.0
+        else:
+            self.alpha = 0.0
 
     def overlay_instances(
         self,
@@ -31,7 +36,8 @@ class AOCVisualizer(Visualizer):
         masks=None,
         keypoints=None,
         assigned_colors=None,
-        alpha=0.5
+        alpha=0.0,
+        orientation_method=None,
     )->VisImage:
         """
         uz: overrided function to customize masks as per AOC requirements i.e. json
@@ -39,9 +45,6 @@ class AOCVisualizer(Visualizer):
         Returns:
             output (VisImage): image object with visualizations.
         """
-
-
-
         num_instances = None
         if boxes is not None:
             boxes = self._convert_boxes(boxes)
@@ -81,17 +84,22 @@ class AOCVisualizer(Visualizer):
             org_labels = [labels[k] for k in sorted_idxs] if labels is not None else None
             masks = [masks[idx] for idx in sorted_idxs] if masks is not None else None
             keypoints = keypoints[sorted_idxs] if keypoints is not None else None
-            #boxes = boxes[sorted_idxs] if boxes is not None else None # use if showing bboxes
+
+
             # uz: override colors, remove boxes and labels
             assigned_colors = self.colours/255
             labels          = None #dont need labels
-            boxes           = None
+            if self.bbox:
+                boxes = boxes[sorted_idxs] if boxes is not None else None  # use if showing bboxes
+            else:
+                boxes= None
         for i in range(num_instances):
 
             #uz: assign colors according to label text from metadata
 
             for colour, cat_id in zip(self.colours, self.category_ids):
-                if str(cat_id) in org_labels[i]:
+                str_cat=str(cat_id)+' '
+                if str_cat in org_labels[i]:
                     color = colour[::-1]/255
             org_labels[i] = org_labels[i][2::]
             if boxes is not None:
@@ -99,7 +107,13 @@ class AOCVisualizer(Visualizer):
 
             if masks is not None:
                 for segment in masks[i].polygons:
-                    self.draw_polygon(segment.reshape(-1, 2), color, alpha=alpha)
+                    mask=segment.reshape(-1, 2)
+                    theta, centroid,vector,vector2 = FruitOrientation.get_angle_pca(masks[i].mask)
+                    height, width = masks[i].mask.shape  # Get mask dimensions
+                    scale_factor = min(width, height) / 1500
+                    x,y=centroid
+                    radius = int(10 * scale_factor)
+                    self.draw_polygon(mask, color, alpha=self.alpha,x=x,y=y,radius=radius,theta=theta,scale_factor=scale_factor,vector=vector)
 
             if labels is not None:
                 # first get a box
@@ -150,7 +164,7 @@ class AOCVisualizer(Visualizer):
                 self.draw_and_connect_keypoints(keypoints_per_instance)
         return self.output
 
-    def draw_polygon(self, segment, color, edge_color=None, alpha=0.5)->VisImage:
+    def draw_polygon(self, segment, color, edge_color=None, alpha=0.5,x=0,y=0,radius=0.0,theta=0.0,scale_factor=1.0,vector=None)->VisImage:
         """
         uz: overrided function to change alpha and remove outline colouring unnecessary code
 
@@ -176,6 +190,18 @@ class AOCVisualizer(Visualizer):
             edgecolor=edge_color,
             linewidth=max(self._default_font_size // 15 * self.output.scale, 1),
         )
-        self.output.ax.add_patch(polygon)
+        if (self.masks):
+            self.output.ax.add_patch(polygon)
+
+        if (self.show_orientation):
+            arrow_length = int(30 * scale_factor)
+            #draw principal vector (yellow, bgr)
+            figure=plt.Arrow(x, y, vector[0],vector[1], width=5.0,facecolor = (0.0,1.0,1.0),alpha=1.0)
+            self.output.ax.add_patch(figure)
+            # draw y-axis vector
+            figure = plt.Arrow(x, y, 0, arrow_length, width=5.0, facecolor=(1.0, 0.0, 0.0), alpha=1.0)
+            self.output.ax.add_patch(figure)
+            # annotate angle text
+            self.output.ax.text(x, y, str(np.around(theta,2)), fontsize=10)
         return self.output
 

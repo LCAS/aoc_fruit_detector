@@ -36,7 +36,9 @@ training:
 settings:
   download_assets: false # if assets such as model and datasets should be downloaded
   rename_pred_images: false #rename the predicted images in img_000001.png like format
-  orientation_method: 'PCA'  #choose between PCA or LOG_POLAR, PCA does not need reference mask
+  segm_masks: true
   bbox: false
+  show_orientation: true  
+
 
  
