@@ -75,7 +75,6 @@ def create_image_info(image_id, file_name, image_size,
             "darwin_url": "",
             "darwin_workview_url":"",
             "id": image_id
-            #"tag_ids" : tag_ids
     }
 
     return image_info
@@ -129,10 +128,10 @@ def create_annotation_info(annotation_id, image_id, category_info, binary_mask,c
 
     is_crowd = 0
     segmentation = binary_mask_to_polygon(binary_mask, tolerance)
-    if len(segmentation)>=1:
-        seg=segmentation[0]
-    else:
-        seg = segmentation
+    #if len(segmentation)>=1:
+    #    seg=segmentation[0]
+    #else:
+    #    seg = segmentation
 
     annotation_info = {"id": annotation_id,
     "image_id": image_id,
@@ -153,9 +152,9 @@ def create_confidence_info(annotation_id, image_id, category_info,confidence_sco
     "confidence": confidence_score}
     return confidence_info
 
-def create_orientation_info(annotation_id, image_id, category_info,generic_mask):
+def create_orientation_info(annotation_id, image_id, category_info,generic_mask,fruit_type):
     mask=generic_mask.mask
-    orientation_angle,centroid,_,_=FruitOrientation.get_angle_pca(mask)
+    orientation_angle,centroid,_,_=FruitOrientation.get_angle_pca(mask,fruit_type)
     orientation_info = {"annotation_id": annotation_id,
     "image_id": image_id,
     "category_id": category_info["id"],

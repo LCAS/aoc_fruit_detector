@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib as mpl
 import matplotlib.colors as mplc
-from ..json_writer.pycococreator.pycococreatortools.fruit_orientation import FruitOrientation
+from ..json_writer.pycococreator.pycococreatortools.fruit_orientation import FruitOrientation, FruitTypes
 
 # detectron2 imports
 from detectron2.utils.visualizer import Visualizer,ColorMode,VisImage
@@ -15,7 +15,7 @@ _SMALL_OBJECT_AREA_THRESH = 1000
 
 class AOCVisualizer(Visualizer):
 
-    def __init__(self, img_rgb, metadata=None, scale=1.0, instance_mode=ColorMode.SEGMENTATION,colours=None,category_ids=None,masks=None,bbox=None,show_orientation=False):
+    def __init__(self, img_rgb, metadata=None, scale=1.0, instance_mode=ColorMode.SEGMENTATION,colours=None,category_ids=None,masks=None,bbox=None,show_orientation=False,fruit_type=FruitTypes.Strawberry):
         super(AOCVisualizer,self).__init__(img_rgb, metadata, scale, instance_mode)
 
         self.category_ids = category_ids
@@ -23,6 +23,7 @@ class AOCVisualizer(Visualizer):
         self.bbox=bbox
         self.masks=masks
         self.show_orientation=show_orientation
+        self.fruit_type=fruit_type
         if masks:
             self.alpha = 1.0
         else:
@@ -38,6 +39,7 @@ class AOCVisualizer(Visualizer):
         assigned_colors=None,
         alpha=0.0,
         orientation_method=None,
+        fruit_type=None
     )->VisImage:
         """
         uz: overrided function to customize masks as per AOC requirements i.e. json
@@ -45,6 +47,7 @@ class AOCVisualizer(Visualizer):
         Returns:
             output (VisImage): image object with visualizations.
         """
+
         num_instances = None
         if boxes is not None:
             boxes = self._convert_boxes(boxes)
@@ -87,7 +90,6 @@ class AOCVisualizer(Visualizer):
 
 
             # uz: override colors, remove boxes and labels
-            assigned_colors = self.colours/255
             labels          = None #dont need labels
             if self.bbox:
                 boxes = boxes[sorted_idxs] if boxes is not None else None  # use if showing bboxes
@@ -108,7 +110,7 @@ class AOCVisualizer(Visualizer):
             if masks is not None:
                 for segment in masks[i].polygons:
                     mask=segment.reshape(-1, 2)
-                    theta, centroid,vector,vector2 = FruitOrientation.get_angle_pca(masks[i].mask)
+                    theta, centroid,vector,vector2 = FruitOrientation.get_angle_pca(masks[i].mask,self.fruit_type)
                     height, width = masks[i].mask.shape  # Get mask dimensions
                     scale_factor = min(width, height) / 1500
                     x,y=centroid

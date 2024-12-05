@@ -8,7 +8,7 @@ Updated by: Abdurrahman Yilmaz (ayilmaz@lincoln.ac.uk) {06/09/24}
 
 import os,traceback,cv2,logging,yaml
 import numpy as np
-
+from detectron_predictor.json_writer.pycococreator.pycococreatortools.fruit_orientation import FruitTypes
 from detectron_trainer.detectron_trainer     import DetectronTrainer
 from detectron_predictor.detectron_predictor import DetectronPredictor
 
@@ -54,6 +54,7 @@ prediction_image_output_dir = config_data['directories']['prediction_output_dir'
 num_classes                 = config_data['training']['number_of_classes']
 epochs                      = config_data['training']['epochs']
 download_assets             = config_data['settings']['download_assets']
+fruit_type                  = config_data['settings']['fruit_type']
 
 # UZ: utils call is made here because we are looping through image directory which is empty in the beginning.
 # This call might be unnecessary in other use cases
@@ -61,6 +62,14 @@ download_assets             = config_data['settings']['download_assets']
 if (download_assets):
     downloadUtils=LearnerUtils(config_data)
     downloadUtils.call_download()
+
+if (fruit_type.upper()=="STRAWBERRY"):
+    fruit_type=FruitTypes.Strawberry
+elif (fruit_type.upper()=="TOMATO"):
+    fruit_type=FruitTypes.Tomato
+else:
+    fruit_type=FruitTypes.Strawberry
+
 
 rgb_files = sorted([f for f in os.listdir(test_image_dir) if os.path.isfile(os.path.join(test_image_dir,f))])
 
@@ -94,11 +103,11 @@ def call_predictor()->None:
                 json_annotation_message, predicted_image, depth_masks = det_predictor.get_predictions_image(rgbd_image,
                                                                                                             prediction_json_output_file,
                                                                                                             image_file_name,
-                                                                                                            sample_no)
+                                                                                                            sample_no,fruit_type)
 
             else:
                 dummy_image_id=1
-                json_annotation_message, predicted_image,depth_masks = det_predictor.get_predictions_message(rgbd_image, dummy_image_id)
+                json_annotation_message, predicted_image,depth_masks = det_predictor.get_predictions_message(rgbd_image, dummy_image_id,fruit_type)
             # Use output json_annotation_message,predicted_image as per requirement
             # In Optimized (non-debug) mode predicted_image is None
 
@@ -118,6 +127,7 @@ def call_trainer(resumeType=False,skipTraining=False)->None:
     except Exception as e:
         logging.error(e)
         print(traceback.format_exc()) if __debug__ else print(e)
+
 
 
 

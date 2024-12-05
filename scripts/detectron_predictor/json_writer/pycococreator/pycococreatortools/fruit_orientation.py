@@ -11,18 +11,18 @@ import traceback
 RADIUS = 300
 
 @unique
-class OrientationMethod(Enum):
+class FruitTypes(Enum):
     """
     Enum of different class names
     """
     """
-    Principal Component Analysis
+    Strawberry
     """
-    PCA         = 0
+    Strawberry         = 0
     """
-    Log Polar Transform (Correlation of phase of mask in frequency domain to estimate angle with respect to reference image)
+    Tomato
     """
-    LOG_POLAR   = 1
+    Tomato              = 1
 
 
 class FruitOrientation():
@@ -45,7 +45,7 @@ class FruitOrientation():
             return np.rad2deg(angle_vector1),-vector1,-vector2
 
     @staticmethod
-    def get_angle_pca(mask):
+    def get_angle_pca(mask=None,fruit_type=FruitTypes.Strawberry):
         try:
             if (mask is not None):
                 mask=np.asarray(mask)
@@ -61,14 +61,19 @@ class FruitOrientation():
                 sorting_indices = np.argsort(eigenvalues)[::-1]
                 eigenvalues = eigenvalues[sorting_indices]
                 eigenvectors = eigenvectors[:, sorting_indices]
-                pca0 = -eigenvectors[:, 0] * eigenvalues[0] ** 0.5
-                pca1 = eigenvectors[:, 1] * eigenvalues[1] ** 0.5       #mask negative x-axis, as we're following right-hand rule
+                if fruit_type==FruitTypes.Strawberry:
+                    pca0 = -eigenvectors[:, 0] * eigenvalues[0] ** 0.5
+                    pca1 = eigenvectors[:, 1] * eigenvalues[1] ** 0.5       #mask negative x-axis, as we're following right-hand rule
+                elif fruit_type==FruitTypes.Tomato:
+                    #swapping axes due to shape of tomato
+                    pca0 = eigenvectors[:, 1] * eigenvalues[1] ** 0.5  # mask negative x-axis, as we're following right-hand rule
+                    pca1 = -eigenvectors[:, 0] * eigenvalues[0] ** 0.5
                 y_axis = np.array([0, 1])
                 theta,vector1,vector2 = FruitOrientation.get_angle_from_vector(pca0, pca1, y_axis)
                 if (com_x> (com_x + vector1[0])):
-                    theta=-np.around(abs(theta),2)
-                else:
                     theta = np.around(abs(theta),2)
+                else:
+                    theta = -np.around(abs(theta),2)
                 return theta, centroid, vector1,vector2
 
             else:

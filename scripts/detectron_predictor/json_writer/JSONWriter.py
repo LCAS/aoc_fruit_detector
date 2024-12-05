@@ -10,6 +10,7 @@ import matplotlib.figure as mplfigure
 import torch
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from .pycococreator.pycococreatortools import pycococreatortools
+from .pycococreator.pycococreatortools.fruit_orientation import FruitTypes
 
 #detectron imports
 from detectron2.data import MetadataCatalog
@@ -57,7 +58,6 @@ class VisImage:
             (self.height * self.scale + 1e-2) / self.dpi,
         )
         self.canvas = FigureCanvasAgg(fig)
-        # self.canvas = mpl.backends.backend_cairo.FigureCanvasCairo(fig)
         ax = fig.add_axes([0.0, 0.0, 1.0, 1.0])
         ax.axis("off")
         # Need to imshow this first so that other patches can be drawn on top
@@ -97,7 +97,7 @@ class JSONWriter(Visualizer):
     """
 
     annotation_id=1
-    def __init__(self,img_rgb,metadata=None, scale=1.0, instance_mode=ColorMode.IMAGE):
+    def __init__(self,img_rgb,metadata=None, fruit_type=FruitTypes.Strawberry,scale=1.0, instance_mode=ColorMode.IMAGE):
         super(JSONWriter, self).__init__(img_rgb, metadata, scale, instance_mode)
         """
         Args:
@@ -121,6 +121,7 @@ class JSONWriter(Visualizer):
             np.sqrt(self.output.height * self.output.width) // 90, 10 // scale
         )
         self._instance_mode = instance_mode
+        self.fruit_type=fruit_type
 
     def create_prediction_json(self, predictions, output_json_file_path,input_file_names,categories_info,image_size,image_id=1):
 
@@ -270,7 +271,7 @@ class JSONWriter(Visualizer):
                 confidence_info = pycococreatortools.create_confidence_info(
                     self.annotation_id, image_id, category_info,label)
                 orientation_info = pycococreatortools.create_orientation_info(
-                    self.annotation_id, image_id, category_info, segment)
+                    self.annotation_id, image_id, category_info, segment,self.fruit_type)
 
                 ann_list.append(annotation_info)
                 conf_list.append(confidence_info)

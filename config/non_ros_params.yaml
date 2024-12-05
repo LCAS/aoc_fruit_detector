@@ -38,7 +38,8 @@ settings:
   rename_pred_images: false #rename the predicted images in img_000001.png like format
   segm_masks: true
   bbox: false
-  show_orientation: true  
+  show_orientation: true
+  fruit_type: 'strawberry' # currently supported for "strawberry" or "tomato"
 
 
  
