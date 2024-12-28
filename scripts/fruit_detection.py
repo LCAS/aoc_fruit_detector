@@ -22,10 +22,11 @@ import numpy as np
 import image_geometry
 
 from ament_index_python.packages import get_package_share_directory, PackageNotFoundError
+from detectron_predictor.json_writer.pycococreator.pycococreatortools.fruit_orientation import FruitTypes
 
 class FruitDetectionNode(Node):
     def __init__(self, non_ros_config_path):
-        super().__init__('fruit_detector')
+        super().__init__('aoc_fruit_detector')
 
         # Declare parameters
         self.declare_parameters(
@@ -36,9 +37,10 @@ class FruitDetectionNode(Node):
                 ('constant_depth_value', 1.0),
                 ('fruit_type', "strawberry"),
                 ('pose3d_frame', ''),
-                ('verbose', [False, False, False, True, True])
-                ('pub_verbose', False)
-                ('pub_markers', False)
+                ('verbose', [False, False, False, True, True]),
+                ('pub_verbose', False),
+                ('pub_markers', False),
+                ('use_ros', True)
             ]
         )
 
@@ -53,65 +55,103 @@ class FruitDetectionNode(Node):
                             if path.startswith('./'):
                                 package_share_directory = get_package_share_directory(self.package_name)
                                 config_data[section][key] = os.path.join(package_share_directory, path.lstrip('./'))
+                
+                self.image_dir = config_data['directories']['test_image_dir']
+                self.prediction_json_dir = config_data['directories']['prediction_json_dir']
+                self.prediction_output_dir = config_data['directories']['prediction_output_dir']
 
                 self.det_predictor = DetectronPredictor(config_data)
+                fruit_type = config_data['settings']['fruit_type']
+                if (fruit_type.upper()=="STRAWBERRY"):
+                    self.fruit_type=FruitTypes.Strawberry
+                elif (fruit_type.upper()=="TOMATO"):
+                    self.fruit_type=FruitTypes.Tomato
+                else:
+                    self.fruit_type=FruitTypes.Strawberry
         else:
             raise FileNotFoundError(f"No config file found in any ' {self.package_name}/config/' folder within {os.getcwd()}")
 
-        # Get parameter values from network
+        self.use_ros = self.get_parameter('use_ros').value
         self.min_depth = self.get_parameter('min_depth').value
         self.max_depth = self.get_parameter('max_depth').value
-        self.constant_depth_value = self.get_parameter('constant_depth_value').value
-        if self.get_parameter('fruit_type').value == "tomato":
-            self.tomato = True
-        elif self.get_parameter('fruit_type').value == "strawberry":
-            self.tomato = False
-        self.pose3d_frame = self.get_parameter('pose3d_frame').value
 
-        self.draw_centroid = self.get_parameter('verbose').value[0]
-        self.draw_bbox = self.get_parameter('verbose').value[1]
-        self.draw_mask = self.get_parameter('verbose').value[2]
-        self.draw_cf = self.get_parameter('verbose').value[3]
-        self.add_text = self.get_parameter('verbose').value[4]
+        if self.use_ros:
+            # Get parameter values from ROS2 network
+            self.constant_depth_value = self.get_parameter('constant_depth_value').value
+            if self.get_parameter('fruit_type').value == "tomato":
+                self.tomato = True
+            elif self.get_parameter('fruit_type').value == "strawberry":
+                self.tomato = False
+            self.pose3d_frame = self.get_parameter('pose3d_frame').value
 
-        self.pub_verbose = self.get_parameter('pub_verbose').value
-        self.pub_markers = self.get_parameter('pub_markers').value
+            self.draw_centroid = self.get_parameter('verbose').value[0]
+            self.draw_bbox = self.get_parameter('verbose').value[1]
+            self.draw_mask = self.get_parameter('verbose').value[2]
+            self.draw_cf = self.get_parameter('verbose').value[3]
+            self.add_text = self.get_parameter('verbose').value[4]
 
-        self.bridge = CvBridge()
-        self.camera_model = image_geometry.PinholeCameraModel()
-        self.set_default_camera_model() # in case camera_info message not available 
-        
-        # Declare subscribers
-        qos_profile = QoSProfile(
-            reliability=ReliabilityPolicy.BEST_EFFORT,
-            depth=1
-        )
+            self.pub_verbose = self.get_parameter('pub_verbose').value
+            self.pub_markers = self.get_parameter('pub_markers').value
 
-        self.image_sub = self.create_subscription(
-            Image,
-            'camera/image_raw',
-            self.image_callback,
-            qos_profile
-        )
+            self.bridge = CvBridge()
+            self.camera_model = image_geometry.PinholeCameraModel()
+            self.set_default_camera_model() # in case camera_info message not available 
+            
+            # Declare subscribers
+            qos_profile = QoSProfile(
+                reliability=ReliabilityPolicy.BEST_EFFORT,
+                depth=1
+            )
 
-        self.depth_sub = self.create_subscription(
-            Image,
-            'camera/depth',
-            self.depth_callback,
-            qos_profile
-        )
+            self.image_sub = self.create_subscription(
+                Image,
+                'camera/image_raw',
+                self.image_callback,
+                qos_profile
+            )
 
-        self.camera_info_sub = self.create_subscription(
-            CameraInfo,
-            'camera/camera_info',
-            self.camera_info_callback,
-            qos_profile
-        )
+            self.depth_sub = self.create_subscription(
+                Image,
+                'camera/depth',
+                self.depth_callback,
+                qos_profile
+            )
 
-        # Create and declare publishers
-        self.publisher_fruit = self.create_publisher(FruitInfoArray, 'fruit_info', 5)
-        self.publisher_comp = self.create_publisher(Image, 'image_composed', 5)
-        self.publisher_3dmarkers = self.create_publisher(MarkerArray, 'fruit_markers', 5)
+            self.camera_info_sub = self.create_subscription(
+                CameraInfo,
+                'camera/camera_info',
+                self.camera_info_callback,
+                qos_profile
+            )
+
+            # Create and declare publishers
+            self.publisher_fruit = self.create_publisher(FruitInfoArray, 'fruit_info', 5)
+            self.publisher_comp = self.create_publisher(Image, 'image_composed', 5)
+            self.publisher_3dmarkers = self.create_publisher(MarkerArray, 'fruit_markers', 5)
+        else: 
+            all_files = sorted([f for f in os.listdir(self.image_dir) if os.path.isfile(os.path.join(self.image_dir, f))])
+
+            rgb_files = sorted([f for f in all_files if f.startswith('image')])
+            depth_files = sorted([f for f in all_files if f.startswith('depth')])
+
+            sample_no = 1
+            for rgb_file in rgb_files:
+                corr_depth_file = rgb_file.replace('image', 'depth', 1)
+
+                if corr_depth_file in depth_files:
+                    image_file_name=os.path.join(self.image_dir, rgb_file)
+                    depth_file_name = os.path.join(self.image_dir, corr_depth_file)
+                    rgb_image = cv2.imread(image_file_name)  # bgr8
+                    depth_image = cv2.imread(depth_file_name, cv2.IMREAD_UNCHANGED)
+                    depth_image = np.nan_to_num(depth_image, nan=self.max_depth, posinf=self.max_depth, neginf=self.min_depth)
+                    rgbd_image = np.dstack((rgb_image, depth_image))
+                    filename, extension = os.path.splitext(rgb_file)
+                    if (self.prediction_json_dir!=""):
+                        prediction_json_output_file = os.path.join(self.prediction_json_dir, filename)+'.json'
+                    self.det_predictor.get_predictions_image(rgbd_image, prediction_json_output_file, self.prediction_output_dir, image_file_name, sample_no, self.fruit_type)
+                else:
+                    self.get_logger().warn(f"Warning: No corresponding depth file: {corr_depth_file} for rgb file: {rgb_file}")
+                sample_no += 1
 
     def compute_pose2d(self, annotation_id, pose_dict):
         """
