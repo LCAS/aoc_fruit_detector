@@ -1,10 +1,11 @@
-fruit_detector:
+aoc_fruit_detector:
   ros__parameters:
     min_depth: 0.1
     max_depth: 15.0
     constant_depth_value: 1.0
-    fruit_type: "strawberry"
+    fruit_type: "strawberry" # currently supported for "strawberry" or "tomato"
     pose3d_frame: ''
-    verbose: [False, True, True, False, False] # To draw [centroid, bbox, mask, coordinate frames, text] annotations on image
+    verbose: [True, True, True, True, True] # To draw [centroid, bbox, mask, coordinate frames, text] annotations on image
     pub_verbose: True # To publish annotated image
-    pub_markers: False
+    pub_markers: False # To publish RViz markers
+    use_ros: True # To subscribe RGBD data and publish output from/on ROS2 framework
