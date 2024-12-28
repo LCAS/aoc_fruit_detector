@@ -101,7 +101,7 @@ class DetectronPredictor(LearnerPredictor):
             raise Exception(e)
         return data
 
-    def get_predictions_image(self, rgbd_image,output_json_file_path='',image_file_name='',sample_no=1,fruit_type=FruitTypes.Strawberry):
+    def get_predictions_image(self, rgbd_image,output_json_file_path='',prediction_output_dir='',image_file_name='',sample_no=1,fruit_type=FruitTypes.Strawberry):
 
         depth_image = rgbd_image[:, :, 3]
         rgb_image = rgbd_image[:, :, :3].astype(np.uint8)
@@ -127,8 +127,8 @@ class DetectronPredictor(LearnerPredictor):
             predicted_image = drawn_predictions.get_image()[:, :, ::-1].copy()
 
             depth_masks, rgb_masks = self.get_masks(predicted_image, rgb_image, depth_image)
-
-            pred_image_dir = os.path.join(self.cfg.OUTPUT_DIR, 'predicted_images')
+            
+            pred_image_dir = os.path.join(prediction_output_dir, 'predicted_images')
             if not os.path.exists(pred_image_dir):
                 os.makedirs(pred_image_dir)
 
@@ -155,7 +155,7 @@ class DetectronPredictor(LearnerPredictor):
             if(__debug__): print(traceback.format_exc())
             raise Exception(e)
 
-    def get_predictions_message(self, rgbd_image, image_id=0,ref_mask=None,fruit_type=FruitTypes.Strawberry):
+    def get_predictions_message(self, rgbd_image, image_id=0,fruit_type=FruitTypes.Strawberry):
         depth_image = rgbd_image[:, :, 3]
         rgb_image = rgbd_image[:, :, :3].astype(np.uint8)
         output_json_file_path=''
@@ -171,7 +171,7 @@ class DetectronPredictor(LearnerPredictor):
                                     instance_mode=self.instance_mode,
                                     colours=self.colours,
                                     category_ids=self.list_category_ids,
-                                    masks=self.segm_masks_only,
+                                    masks=self.masks,
                                     show_orientation=self.show_orientation,
                                     fruit_type=fruit_type
                                     )
