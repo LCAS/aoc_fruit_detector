@@ -146,7 +146,7 @@ class DetectronPredictor(LearnerPredictor):
                 overlay_fName = os.path.join(pred_image_dir, f_name)
             cv2.imwrite(overlay_fName, cv2.cvtColor(predicted_image, cv2.COLOR_BGR2RGB))
             delta=str(end_time - start_time)
-            print(f"predicted image saved in output folder for file {overlay_fName}, Duration: {delta}")
+            print(f"Predicted image saved in output folder for file {overlay_fName}, Duration: {delta}")
             json_writer = JSONWriter(rgb_image, self.metadata[0])
             categories_info=self.metadata[1] # category info is saved as second list
             predicted_json_ann=json_writer.create_prediction_json(predictions, output_json_file_path, image_file_name,categories_info,image_size,1,save_json_file)
