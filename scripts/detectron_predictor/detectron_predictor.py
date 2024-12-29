@@ -107,6 +107,7 @@ class DetectronPredictor(LearnerPredictor):
         rgb_image = rgbd_image[:, :, :3].astype(np.uint8)
         image_size = rgb_image.shape
         image_size = tuple(reversed(image_size[:-1]))
+        save_json_file = True
         try:
             outputs = self.predictor(rgb_image)
             predictions = outputs["instances"].to("cpu")
@@ -148,7 +149,7 @@ class DetectronPredictor(LearnerPredictor):
             print(f"predicted image saved in output folder for file {overlay_fName}, Duration: {delta}")
             json_writer = JSONWriter(rgb_image, self.metadata[0])
             categories_info=self.metadata[1] # category info is saved as second list
-            predicted_json_ann=json_writer.create_prediction_json(predictions, output_json_file_path, image_file_name,categories_info,image_size,1)
+            predicted_json_ann=json_writer.create_prediction_json(predictions, output_json_file_path, image_file_name,categories_info,image_size,1,save_json_file)
             return predicted_json_ann,predicted_image,depth_masks
         except Exception as e:
             logging.error(e)
@@ -162,6 +163,7 @@ class DetectronPredictor(LearnerPredictor):
         image_size=rgb_image.shape
         image_size = tuple(reversed(image_size[:-1]))
         image_file_name= f'img_{str(image_id).zfill(6)}.png'
+        save_json_file=False
         try:
             outputs = self.predictor(rgb_image)
             predictions = outputs["instances"].to("cpu")
@@ -181,7 +183,7 @@ class DetectronPredictor(LearnerPredictor):
             json_writer = JSONWriter(rgb_image, self.metadata[0],fruit_type)
             categories_info = self.metadata[1]  # category info is saved as second list
             predicted_json_ann = json_writer.create_prediction_json(predictions, output_json_file_path,
-                                                                    image_file_name, categories_info,image_size,image_id)
+                                                                    image_file_name, categories_info,image_size,image_id,save_json_file)
             return predicted_json_ann, predicted_image,depth_masks
         except Exception as e:
             logging.error(e)
