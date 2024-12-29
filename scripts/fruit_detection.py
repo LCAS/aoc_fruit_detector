@@ -131,8 +131,8 @@ class FruitDetectionNode(Node):
         else: 
             all_files = sorted([f for f in os.listdir(self.image_dir) if os.path.isfile(os.path.join(self.image_dir, f))])
 
-            rgb_files = sorted([f for f in all_files if f.startswith('image')])
-            depth_files = sorted([f for f in all_files if f.startswith('depth')])
+            rgb_files = sorted([f for f in all_files if 'image' in f])
+            depth_files = sorted([f for f in all_files if 'depth' in f])
 
             sample_no = 1
             for rgb_file in rgb_files:
@@ -147,6 +147,7 @@ class FruitDetectionNode(Node):
                     rgbd_image = np.dstack((rgb_image, depth_image))
                     filename, extension = os.path.splitext(rgb_file)
                     if (self.prediction_json_dir!=""):
+                        os.makedirs(self.prediction_json_dir, exist_ok=True)
                         prediction_json_output_file = os.path.join(self.prediction_json_dir, filename)+'.json'
                     self.det_predictor.get_predictions_image(rgbd_image, prediction_json_output_file, self.prediction_output_dir, image_file_name, sample_no, self.fruit_type)
                 else:
@@ -377,7 +378,7 @@ class FruitDetectionNode(Node):
             rgbd_image = np.dstack((self.cv_image, depth_image))
             self.get_logger().info("RGBD ready")
             
-            json_annotation_message, _, depth_mask = self.det_predictor.get_predictions_message(rgbd_image,image_id)
+            json_annotation_message, _, depth_mask = self.det_predictor.get_predictions_message(rgbd_image,image_id, self.fruit_type)
 
             #info = json_annotation_message.get('info', [])
             #licenses = json_annotation_message.get('licenses', [])
