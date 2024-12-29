@@ -46,7 +46,7 @@ python3 -m pip install -e detectron2
     source install/setup.bash 
     ```
 
-### Dockerised Running
+### Running
 
 Run following to publish annotations detected by `aoc_fruit_detector` package.
 
@@ -59,6 +59,27 @@ If there is no depth channel, you may use a dummy depth value, default value is 
 ```bash
 ros2 launch aoc_fruit_detector fruit_detection.launch.py constant_depth_value:=0.5
 ```
+
+## Parameters
+
+The **config** folder contains two parameter files for specifying system characteristics: 
+* **ros_params.yaml** allows tuning of ROS framework parameters.
+* **non_ros_params.yaml** contains parameters for the fruit detection module.
+
+### Key parameters
+
+* **min_depth, max_depth**: Define the minimum and maximum depth values for the depth channel of the camera input.
+* **constant_depth_value**: Used when no depth image or channel is available. This value is assumed as the distance between the camera and the detected fruit, enabling 3D pose estimation. This is particularly useful for RGB cameras without depth estimation capabilities.
+* **fruit_type**: Specifies the type of fruit to detect. Currently supported values are **"strawberry"** and **"tomato"**.
+* **pose3d_frame**: Sets the frame ID for the 3D poses of the detected fruits.
+* **pub_verbose**: Publishes an annotated image as a `sensor_msgs/Image` message in the ROS2 framework.
+* **verbose**: Determines which annotations appear on the annotated image. A Boolean list specifies the visualization of the following annotations in order: `[centroid, bounding box, mask, coordinate frames, text]`.
+* **pub_markers**: To publish RViz markers in the ROS2 framework.
+* **use_ros**: Specifies whether the fruit detection framework is integrated with the ROS2 framework.
+If `False`, images are taken from the test_image_dir directory specified in **non_ros_params.yaml**, and the annotated images and JSON annotation files are saved to `prediction_output_dir` and `prediction_json_dir` directories, respectively.
+If `True`, RGB and depth images are subscribed from camera topics, and annotations are published via ROS2 topics and as RViz markers.
+
+Please note that annotated images and JSON annotation files are saved to the location where the package is installed. Check the **install** folder of the repository to find the annotation outputs.
 
 ## Wiki
 
