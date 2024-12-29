@@ -76,8 +76,8 @@ The **config** folder contains two parameter files for specifying system charact
 * **verbose**: Determines which annotations appear on the annotated image. A Boolean list specifies the visualization of the following annotations in order: `[centroid, bounding box, mask, coordinate frames, text]`.
 * **pub_markers**: To publish RViz markers in the ROS2 framework.
 * **use_ros**: Specifies whether the fruit detection framework is integrated with the ROS2 framework.
-If `False`, images are taken from the test_image_dir directory specified in **non_ros_params.yaml**, and the annotated images and JSON annotation files are saved to `prediction_output_dir` and `prediction_json_dir` directories, respectively.
-If `True`, RGB and depth images are subscribed from camera topics, and annotations are published via ROS2 topics and as RViz markers.
+  * If `False`, images are taken from the `test_image_dir` directory specified in **non_ros_params.yaml**, and the annotated images and JSON annotation files are saved to `prediction_output_dir` and `prediction_json_dir` directories, respectively.
+  * If `True`, RGB and depth images are subscribed from camera topics, and annotations are published via ROS2 topics and as RViz markers.
 
 Please note that annotated images and JSON annotation files are saved to the location where the package is installed. Check the **install** folder of the repository to find the annotation outputs.
 
