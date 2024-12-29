@@ -48,16 +48,10 @@ python3 -m pip install -e detectron2
 
 ### Running
 
-Run following to publish annotations detected by `aoc_fruit_detector` package.
+Run following to publish/save annotations detected by `aoc_fruit_detector` package.
 
 ```bash
 ros2 launch aoc_fruit_detector fruit_detection.launch.py
-```
-
-If there is no depth channel, you may use a dummy depth value, default value is 1.0 m. Depth channel is used to estimate 3D pose of the fruits.
-
-```bash
-ros2 launch aoc_fruit_detector fruit_detection.launch.py constant_depth_value:=0.5
 ```
 
 ## Parameters
@@ -69,7 +63,7 @@ The **config** folder contains two parameter files for specifying system charact
 ### Key parameters
 
 * **min_depth, max_depth**: Define the minimum and maximum depth values for the depth channel of the camera input.
-* **constant_depth_value**: Used when no depth image or channel is available. This value is assumed as the distance between the camera and the detected fruit, enabling 3D pose estimation. This is particularly useful for RGB cameras without depth estimation capabilities.
+* **constant_depth_value**: Used when no depth image or channel is available. This value is assumed as the distance between the camera and the detected fruit, enabling 3D pose estimation. This is particularly useful for RGB cameras without depth estimation capabilities. Default value is 1.0 m.
 * **fruit_type**: Specifies the type of fruit to detect. Currently supported values are **"strawberry"** and **"tomato"**.
 * **pose3d_frame**: Sets the frame ID for the 3D poses of the detected fruits.
 * **pub_verbose**: Publishes an annotated image as a `sensor_msgs/Image` message in the ROS2 framework.
