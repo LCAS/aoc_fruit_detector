@@ -226,23 +226,23 @@ class FruitDetectionNode(Node):
 
         return marker
 
-    def compute_pose3d(self, pose2d, depth_mask):
+    def compute_pose3d(self, pose2d, depth_image):
         pose3d = PoseStamped()
 
-        height, width, _ = depth_mask.shape
+        height, width = depth_image.shape
         x = int(pose2d.x)
         y = int(pose2d.y)
 
         if 0 <= x < width and 0 <= y < height:
-            depth_values_at_pose = depth_mask[y, x, :]
+            depth_values_at_pose = depth_image[y, x]
             non_zero_depth_values = depth_values_at_pose[depth_values_at_pose > 0]
 
             if non_zero_depth_values.size > 0:
                 closest_depth_value = np.min(non_zero_depth_values)
             else:
-                closest_depth_value = 0.0 
+                closest_depth_value = self.max_depth 
         else:
-            closest_depth_value = 0.0
+            closest_depth_value = self.max_depth
             self.get_logger().warn(f'Out of size x:{x}, width:{width}, y:{y} and height:{height}')
         
         ray = self.back_project_2d_to_3d_ray(pose2d.x, pose2d.y)
@@ -378,7 +378,7 @@ class FruitDetectionNode(Node):
             rgbd_image = np.dstack((self.cv_image, depth_image))
             self.get_logger().info("RGBD ready")
             
-            json_annotation_message, _, depth_mask = self.det_predictor.get_predictions_message(rgbd_image,image_id, self.fruit_type)
+            json_annotation_message, _, depth_mask = self.det_predictor.get_predictions_message(rgbd_image, image_id, self.fruit_type)
 
             #info = json_annotation_message.get('info', [])
             #licenses = json_annotation_message.get('licenses', [])
@@ -464,7 +464,7 @@ class FruitDetectionNode(Node):
                 fruit_msg.mask2d = segmentation
                 fruit_msg.pose2d = self.compute_pose2d(fruit_id, pose_dict)
                 fruit_msg.mask3d = segmentation
-                fruit_msg.pose3d = self.compute_pose3d(fruit_msg.pose2d, depth_mask)
+                fruit_msg.pose3d = self.compute_pose3d(fruit_msg.pose2d, depth_image)
                 fruit_msg.confidence = float(confidence_dict.get(fruit_id, '-1.0'))
                 fruit_msg.occlusion_level = 0.88
                 # Log and publish the message

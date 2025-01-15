@@ -55,6 +55,7 @@ CATKIN_IGNORE
 scripts/**/model/*
 !scripts/**/model/.gitkeep
 scripts/**/annotations/
+scripts/**/prediction_output/
 scripts/**/dataset_catalogs/
 scripts/**/images/
 scripts/**/tomato_dataset/
