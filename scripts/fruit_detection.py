@@ -425,49 +425,6 @@ class FruitDetectionNode(Node):
             
             json_annotation_message, _, rgb_masks, depth_mask = self.det_predictor.get_predictions_message(rgbd_image, image_id, self.fruit_type)
 
-            print(f"rgb_masks: {rgb_masks.shape}")
-            print(f"depth_mask: {depth_mask.shape}")
-
-            print(f"rgb_masks components: {rgb_masks[5,10,:]}")
-
-            plt.figure(figsize=(10, 10))
-
-            # Visualize the first channel (index 0)
-            plt.subplot(2, 3, 1)
-            plt.imshow(rgb_masks[:, :, 0], cmap='gray')
-            plt.title('rgb_masks - Channel 1')
-            plt.axis('off')
-
-            # Visualize the second channel (index 1)
-            plt.subplot(2, 3, 2)
-            plt.imshow(rgb_masks[:, :, 1], cmap='gray')
-            plt.title('rgb_masks - Channel 2')
-            plt.axis('off')
-
-            plt.subplot(2, 3, 3)
-            plt.imshow(self.cv_image)
-            plt.title('RGB Visualization of rgb_masks')
-            plt.axis('off')
-
-            plt.subplot(2, 3, 4)
-            plt.imshow(depth_mask[:, :, 0]/15.0, cmap='gray')
-            plt.title('depth_mask - Channel 1')
-            plt.axis('off')
-
-            # Visualize the second channel (index 1)
-            plt.subplot(2, 3, 5)
-            plt.imshow(depth_mask[:, :, 1]/15.0, cmap='gray')
-            plt.title('depth_mask - Channel 2')
-            plt.axis('off')
-
-            plt.subplot(2, 3, 6)
-            plt.imshow(cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2RGB))
-            plt.title('RGB Visualization of rgb_masks')
-            plt.axis('off')
-
-            plt.tight_layout()
-            plt.savefig('rgb_masks_com.png')
-
             #info = json_annotation_message.get('info', [])
             #licenses = json_annotation_message.get('licenses', [])
             #self.get_logger().info(f"Info: {info}")
