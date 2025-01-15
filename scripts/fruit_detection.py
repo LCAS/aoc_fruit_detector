@@ -24,6 +24,13 @@ import image_geometry
 from ament_index_python.packages import get_package_share_directory, PackageNotFoundError
 from detectron_predictor.json_writer.pycococreator.pycococreatortools.fruit_orientation import FruitTypes
 
+import matplotlib.pyplot as plt
+
+import tf2_ros
+from geometry_msgs.msg import TransformStamped
+
+from scipy.spatial.transform import Rotation as R
+
 class FruitDetectionNode(Node):
     def __init__(self, non_ros_config_path):
         super().__init__('aoc_fruit_detector')
@@ -76,6 +83,8 @@ class FruitDetectionNode(Node):
         self.max_depth = self.get_parameter('max_depth').value
 
         if self.use_ros:
+            self.tf_buffer = tf2_ros.Buffer()
+            self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
             # Get parameter values from ROS2 network
             self.constant_depth_value = self.get_parameter('constant_depth_value').value
             if self.get_parameter('fruit_type').value == "tomato":
@@ -95,7 +104,7 @@ class FruitDetectionNode(Node):
 
             self.bridge = CvBridge()
             self.camera_model = image_geometry.PinholeCameraModel()
-            self.set_default_camera_model() # in case camera_info message not available 
+            self.set_default_camera_model() # in case camera_info calibration message not available 
             
             # Declare subscribers
             qos_profile = QoSProfile(
@@ -220,7 +229,7 @@ class FruitDetectionNode(Node):
         marker.color.r = 0.0
         marker.color.g = 0.0
         marker.color.b = 1.0
-        marker.color.a = 1.0  # Fully opaque
+        marker.color.a = 1.0
 
         marker.lifetime = rclpy.time.Duration(seconds=0).to_msg()
 
@@ -268,12 +277,12 @@ class FruitDetectionNode(Node):
         """
         Sets the camera model to default intrinsic parameters (pinhole model)
         """
-        default_fx = 525.0  # Focal length in x (pixels)
-        default_fy = 525.0  # Focal length in y (pixels)
-        default_cx = 319.5  # Principal point x (image center in pixels)
-        default_cy = 239.5  # Principal point y (image center in pixels)
-        image_width = 640
-        image_height = 480
+        default_fx = 699.05  # Focal length in x (pixels)
+        default_fy = 699.05  # Focal length in y (pixels)
+        default_cx = 639.74  # Principal point x (image center in pixels)
+        default_cy = 374.974  # Principal point y (image center in pixels)
+        image_width = 1280
+        image_height = 720
 
         # Create a fake CameraInfo message to initialize the camera model
         camera_info = CameraInfo()
@@ -311,9 +320,7 @@ class FruitDetectionNode(Node):
         #return camera_matrix, distortion_coeffs
 
     def back_project_2d_to_3d_ray(self, u, v):
-        #ray = self.camera_model.projectPixelTo3dRay((u, v))
-        v_flipped = self.camera_model.height - v
-        ray = self.camera_model.projectPixelTo3dRay((u, v_flipped))
+        ray = self.camera_model.projectPixelTo3dRay((u, v))
         return ray
         #pixel = np.array([[u, v]], dtype=np.float32)
         #pixel = np.expand_dims(pixel, axis=0)
@@ -325,6 +332,14 @@ class FruitDetectionNode(Node):
     def compute_3d_point_from_depth(self, ray, depth):
         # Compute the 3D point by scaling the ray direction with the depth
         return [ray[0] * depth, ray[1] * depth, ray[2] * depth]
+
+    def compute_3d_point_from_depth(self, ray, depth):
+        # Compute the 3D point in optical frame
+        point_optical = np.array([ray[0] * depth, ray[1] * depth, ray[2] * depth, 1.0])
+
+        # Apply the transformation to convert to camera frame
+        point_camera = np.dot(self.tf_matrix, point_optical)
+        return point_camera[:3]
 
     def depth_callback(self, msg):
         try:
@@ -344,9 +359,39 @@ class FruitDetectionNode(Node):
     def create_pose_dict(self, pose_list):
         return {entry['annotation_id']: (entry['centroid'], entry['orientation']) for entry in pose_list}
 
+    def get_optic_tf(self):
+        try:
+            transform: TransformStamped = self.tf_buffer.lookup_transform(
+                'camera_frame', 'camera_optical_frame', rclpy.time.Time(), timeout=rclpy.duration.Duration(seconds=0.5)
+            )
+            tr = [
+                transform.transform.translation.x,
+                transform.transform.translation.y,
+                transform.transform.translation.z
+            ]
+            q = [
+                transform.transform.rotation.x,
+                transform.transform.rotation.y,
+                transform.transform.rotation.z,
+                transform.transform.rotation.w
+            ]
+        except (tf2_ros.LookupException, tf2_ros.ExtrapolationException, TimeoutError):
+            self.get_logger().warn("Default transform between camera and optical frame used.")
+            tr = [0.0, 0.0, 0.0]
+            q = R.from_quat([0.5, -0.5, 0.5, -0.5]).as_quat() # default orientation between camera and optical frames
+        rot_matrix = R.from_quat(q).as_matrix()
+        tf_matrix = np.eye(4)
+        tf_matrix[:3, :3] = rot_matrix
+        print(f"rot_matrix: {rot_matrix}")
+        tf_matrix[:3, 3] = tr
+        return tf_matrix
+
     def image_callback(self, msg):
         try:
             self.get_logger().info("Image captured.")
+
+            self.tf_matrix = self.get_optic_tf()
+
             # Convert ROS Image message to OpenCV image
             self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
             self.get_logger().info("RGB ready.")
@@ -378,7 +423,50 @@ class FruitDetectionNode(Node):
             rgbd_image = np.dstack((self.cv_image, depth_image))
             self.get_logger().info("RGBD ready")
             
-            json_annotation_message, _, depth_mask = self.det_predictor.get_predictions_message(rgbd_image, image_id, self.fruit_type)
+            json_annotation_message, _, rgb_masks, depth_mask = self.det_predictor.get_predictions_message(rgbd_image, image_id, self.fruit_type)
+
+            print(f"rgb_masks: {rgb_masks.shape}")
+            print(f"depth_mask: {depth_mask.shape}")
+
+            print(f"rgb_masks components: {rgb_masks[5,10,:]}")
+
+            plt.figure(figsize=(10, 10))
+
+            # Visualize the first channel (index 0)
+            plt.subplot(2, 3, 1)
+            plt.imshow(rgb_masks[:, :, 0], cmap='gray')
+            plt.title('rgb_masks - Channel 1')
+            plt.axis('off')
+
+            # Visualize the second channel (index 1)
+            plt.subplot(2, 3, 2)
+            plt.imshow(rgb_masks[:, :, 1], cmap='gray')
+            plt.title('rgb_masks - Channel 2')
+            plt.axis('off')
+
+            plt.subplot(2, 3, 3)
+            plt.imshow(self.cv_image)
+            plt.title('RGB Visualization of rgb_masks')
+            plt.axis('off')
+
+            plt.subplot(2, 3, 4)
+            plt.imshow(depth_mask[:, :, 0]/15.0, cmap='gray')
+            plt.title('depth_mask - Channel 1')
+            plt.axis('off')
+
+            # Visualize the second channel (index 1)
+            plt.subplot(2, 3, 5)
+            plt.imshow(depth_mask[:, :, 1]/15.0, cmap='gray')
+            plt.title('depth_mask - Channel 2')
+            plt.axis('off')
+
+            plt.subplot(2, 3, 6)
+            plt.imshow(cv2.cvtColor(self.cv_image, cv2.COLOR_BGR2RGB))
+            plt.title('RGB Visualization of rgb_masks')
+            plt.axis('off')
+
+            plt.tight_layout()
+            plt.savefig('rgb_masks_com.png')
 
             #info = json_annotation_message.get('info', [])
             #licenses = json_annotation_message.get('licenses', [])
