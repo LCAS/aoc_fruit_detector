@@ -107,7 +107,7 @@ def call_predictor()->None:
 
             else:
                 dummy_image_id=1
-                json_annotation_message, predicted_image,depth_masks = det_predictor.get_predictions_message(rgbd_image, dummy_image_id,fruit_type)
+                json_annotation_message, predicted_image, rgb_masks, depth_masks = det_predictor.get_predictions_message(rgbd_image, dummy_image_id,fruit_type)
             # Use output json_annotation_message,predicted_image as per requirement
             # In Optimized (non-debug) mode predicted_image is None
 

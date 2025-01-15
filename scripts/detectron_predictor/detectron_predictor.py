@@ -184,7 +184,7 @@ class DetectronPredictor(LearnerPredictor):
             categories_info = self.metadata[1]  # category info is saved as second list
             predicted_json_ann = json_writer.create_prediction_json(predictions, output_json_file_path,
                                                                     image_file_name, categories_info, image_size, image_id, save_json_file)
-            return predicted_json_ann, predicted_image, depth_masks
+            return predicted_json_ann, predicted_image, rgb_masks, depth_masks
         except Exception as e:
             logging.error(e)
             raise Exception(e)
@@ -197,8 +197,8 @@ class DetectronPredictor(LearnerPredictor):
 
         first_iter=True
         for colour, category_id in zip(self.colours, self.list_category_ids):
-            class_colour = np.bitwise_and(fg_masks[:, :, 1] == colour[1], fg_masks[:, :, 2] == colour[2])
-            class_colour = np.bitwise_and(class_colour == True, fg_masks[:, :, 0] == colour[0])*1
+            class_colour = np.bitwise_and(fg_masks[:, :, 1] == colour[1], fg_masks[:, :, 0] == colour[0])
+            class_colour = np.bitwise_and(class_colour == True, fg_masks[:, :, 2] == colour[2])*1
             depth_mask = class_colour*depth_image
             class_colour *= (category_id+1)
 
