@@ -1,0 +1,77 @@
+name: Build Docker image
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    tags:
+      - '*'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-docker-image:
+    if: github.repository_owner == 'LCAS'
+    runs-on: lcas
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - base_image: lcas.lincoln.ac.uk/lcas/ros:jammy-humble-cuda11.8-opengl
+            ros_distro: humble
+            push_image: lcas.lincoln.ac.uk/lcas/aoc_fruit_detector
+  
+    steps:
+    - name: Node Js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "^16.13.0 || >=18.0.0"
+    - uses: de-vri-es/setup-git-credentials@v2
+      with:
+        credentials: ${{ secrets.LCAS_GITHUB_CREDENTIALS }}
+
+    - uses: actions/checkout@v3
+
+    - name: What
+      run: echo "BRANCH=${GITHUB_REF##*/}" >> $GITHUB_ENV
+
+    - name: Docker Login LCAS
+      if: ${{ github.event_name != 'pull_request' }}
+      uses: docker/login-action@v3
+      with:
+        registry: lcas.lincoln.ac.uk
+        username: ${{ secrets.LCAS_REGISTRY_PUSHER }}
+        password: ${{ secrets.LCAS_REGISTRY_TOKEN }}
+
+    - name: Docker meta
+      id: meta_public
+      uses: docker/metadata-action@v5
+      with:
+        # list of Docker images to use as base name for tags
+        images: |
+          ${{ matrix.push_image }}
+        
+
+    - name: Build Public Docker Image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: .devcontainer/docker/ros2/Dockerfile
+        platforms: linux/amd64
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta_public.outputs.tags }}
+        labels: ${{ steps.meta_public.outputs.labels }}
+        target: user_space
+        #tags: ${{ matrix.push_image }},${{ matrix.push_image }}-${{ env.BRANCH }}
+        build-args: |
+            BASE_IMAGE=${{ matrix.base_image }}
+            BRANCH=${{ env.BRANCH }}
+            ROS_DISTRO=${{ matrix.ros_distro }}
+
+    - name: Docker Login AOC
+      if: ${{ github.event_name != 'pull_request' }}
+      uses: docker/login-action@v3
+      with:
+        registry: aoccr.zrok.lcas.group
+        username: ${{ secrets.AOC_REGISTRY_PUSHER }}
+        password: ${{ secrets.AOC_REGISTRY_TOKEN }}
