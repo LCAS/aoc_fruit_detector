@@ -47,7 +47,9 @@ jobs:
         # list of Docker images to use as base name for tags
         images: |
           ${{ matrix.push_image }}
-        
+        tags: |
+          type=ref,event=branch,pattern=main
+          latest
 
     - name: Build Public Docker Image
       uses: docker/build-push-action@v6
