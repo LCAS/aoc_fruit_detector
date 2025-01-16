@@ -53,7 +53,7 @@ jobs:
       uses: docker/build-push-action@v6
       with:
         context: .
-        file: .devcontainer/docker/ros2/Dockerfile
+        file: .devcontainer/Dockerfile
         platforms: linux/amd64
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta_public.outputs.tags }}
