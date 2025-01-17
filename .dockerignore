@@ -6,4 +6,13 @@ build/
 bin/
 lib/
 install/
+.devcontainer/Dockerfile
+.devcontainer/docker-compose*yml
+.github/
+.git/
+*.env
+fruit_detector_ws/src/aoc_fruit_detector
+node_modules
+logs
+tmp
 *~
