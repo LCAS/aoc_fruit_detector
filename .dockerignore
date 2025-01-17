@@ -7,3 +7,8 @@ bin/
 lib/
 install/
 *~
+.devcontainer/Dockerfile
+.devcontainer/docker-compose*yml
+.github/
+.git/
+*.env
