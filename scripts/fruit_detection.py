@@ -44,6 +44,7 @@ class FruitDetectionNode(Node):
                 ('constant_depth_value', 1.0),
                 ('fruit_type', "strawberry"),
                 ('pose3d_frame', ''),
+                ('pose3d_tf', False),
                 ('verbose', [False, False, False, True, True]),
                 ('pub_verbose', False),
                 ('pub_markers', False),
@@ -92,6 +93,8 @@ class FruitDetectionNode(Node):
             elif self.get_parameter('fruit_type').value == "strawberry":
                 self.tomato = False
             self.pose3d_frame = self.get_parameter('pose3d_frame').value
+
+            self.pose3d_tf = self.get_parameter('pose3d_tf').value
 
             self.draw_centroid = self.get_parameter('verbose').value[0]
             self.draw_bbox = self.get_parameter('verbose').value[1]
@@ -328,18 +331,17 @@ class FruitDetectionNode(Node):
         #ray = [undistorted_point[0][0][0], undistorted_point[0][0][1], 1.0]
         
         #return ray
-    
-    def compute_3d_point_from_depth(self, ray, depth):
-        # Compute the 3D point by scaling the ray direction with the depth
-        return [ray[0] * depth, ray[1] * depth, ray[2] * depth]
 
     def compute_3d_point_from_depth(self, ray, depth):
         # Compute the 3D point in optical frame
         point_optical = np.array([ray[0] * depth, ray[1] * depth, ray[2] * depth, 1.0])
-
-        # Apply the transformation to convert to camera frame
-        point_camera = np.dot(self.tf_matrix, point_optical)
-        return point_camera[:3]
+        if self.pose3d_tf:
+            # Apply the transformation to convert to camera frame
+            point_camera = np.dot(self.tf_matrix, point_optical)
+            return point_camera[:3]
+        else:
+            return point_optical
+        
 
     def depth_callback(self, msg):
         try:
@@ -362,7 +364,7 @@ class FruitDetectionNode(Node):
     def get_optic_tf(self):
         try:
             transform: TransformStamped = self.tf_buffer.lookup_transform(
-                'camera_frame', 'camera_optical_frame', rclpy.time.Time(), timeout=rclpy.duration.Duration(seconds=0.5)
+                'zed_camera_link', 'zed_left_camera_optical_frame', rclpy.time.Time(), timeout=rclpy.duration.Duration(seconds=0.5)
             )
             tr = [
                 transform.transform.translation.x,
@@ -375,15 +377,17 @@ class FruitDetectionNode(Node):
                 transform.transform.rotation.z,
                 transform.transform.rotation.w
             ]
+            self.get_logger().info(f"TF between camera and optical frame: t={tr} and q={q}")
         except (tf2_ros.LookupException, tf2_ros.ExtrapolationException, TimeoutError):
-            self.get_logger().warn("Default transform between camera and optical frame used.")
             tr = [0.0, 0.0, 0.0]
             q = R.from_quat([0.5, -0.5, 0.5, -0.5]).as_quat() # default orientation between camera and optical frames
+            self.get_logger().warn(f"Default transform between camera and optical frame used: t={tr} and q={q}")
         rot_matrix = R.from_quat(q).as_matrix()
         tf_matrix = np.eye(4)
         tf_matrix[:3, :3] = rot_matrix
-        print(f"rot_matrix: {rot_matrix}")
+        #print(f"rot_matrix: {rot_matrix}")
         tf_matrix[:3, 3] = tr
+        #print(f"tf_matrix: {tf_matrix}")
         return tf_matrix
 
     def image_callback(self, msg):
