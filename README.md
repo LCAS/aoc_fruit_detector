@@ -66,6 +66,7 @@ The **config** folder contains two parameter files for specifying system charact
 * **constant_depth_value**: Used when no depth image or channel is available. This value is assumed as the distance between the camera and the detected fruit, enabling 3D pose estimation. This is particularly useful for RGB cameras without depth estimation capabilities. Default value is 1.0 m.
 * **fruit_type**: Specifies the type of fruit to detect. Currently supported values are **"strawberry"** and **"tomato"**.
 * **pose3d_frame**: Sets the frame ID for the 3D poses of the detected fruits.
+* **pose3d_tf**: In some cases, camera_info message includes camera_frame rather than camera_optical_frame. In this case, the 3D pose estimated should be transformed from optical frame to camera frame. For transformation needed cases, set to `True`, otherwise keep as `False`. 
 * **pub_verbose**: Publishes an annotated image as a `sensor_msgs/Image` message in the ROS2 framework.
 * **verbose**: Determines which annotations appear on the annotated image. A Boolean list specifies the visualization of the following annotations in order: `[centroid, bounding box, mask, coordinate frames, text]`.
 * **pub_markers**: To publish RViz markers in the ROS2 framework.
