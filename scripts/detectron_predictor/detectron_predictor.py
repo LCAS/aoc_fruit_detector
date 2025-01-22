@@ -5,11 +5,8 @@ Started by: Usman Zahidi (uz) {02/08/24}
 import os, pickle, logging,traceback
 
 import numpy
-# detectron imports
 from detectron2.config import get_cfg
-#from detectron2.data import Metadata
 from detectron2.engine.defaults import DefaultPredictor
-#from detectron2.data.catalog  import MetadataCatalog
 from detectron2 import model_zoo
 from detectron_predictor.json_writer.pycococreator.pycococreatortools.fruit_orientation import FruitTypes
 
@@ -174,8 +171,8 @@ class DetectronPredictor(LearnerPredictor):
                                     colours=self.colours,
                                     category_ids=self.list_category_ids,
                                     masks=self.masks,
-                                    show_orientation=self.show_orientation,
-                                    fruit_type=fruit_type
+                                    show_orientation=False,   # UZ: Set to false
+                                    fruit_type=fruit_type,
                                     )
             drawn_predictions = vis_aoc.draw_instance_predictions(outputs["instances"].to("cpu"))
             predicted_image = drawn_predictions.get_image()[:, :, ::-1].copy()

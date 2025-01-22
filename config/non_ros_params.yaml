@@ -5,6 +5,7 @@
 datasets:
   train_dataset_name: 'aoc_train_dataset'
   test_dataset_name: 'aoc_test_dataset'
+  validation_dataset_name: 'aoc_validation_dataset'
   dataset_train_annotation_url: 'https://lncn.ac/aocanntrain' 
   dataset_train_images_url: 'https://lncn.ac/aocdatatrain'
   dataset_test_annotation_url: 'https://lncn.ac/aocanntest' 
@@ -19,12 +20,14 @@ files:
   train_dataset_catalog_file: './data/dataset_catalogs/tom_train_dataset_catalog.pkl'
   train_annotation_file: './data/tomato_dataset/train/annotations/ripeness_class_annotations.json'
   test_annotation_file: './data/tomato_dataset/test/annotations/ripeness_class_annotations.json'
+  validation_annotation_file: './data/tomato_dataset/val/annotations/ripeness_class_annotations.json'
   model_url: 'https://lncn.ac/aocmodel'
   meta_catalog_url: 'https://lncn.ac/aocmeta'
   train_catalog_url: 'https://lncn.ac/aoccat'
 directories:
   train_image_dir: './data/strawberry_dataset/train/'
   test_image_dir: './data/bag/rgbd/' #'./data/strawberry_dataset/test/'
+  validation_image_dir: './data/tomato_dataset/val/'
   training_output_dir: './data/training_output/'
   prediction_output_dir: './data/prediction_output/test_images/'
   prediction_json_dir: './data/annotations/predicted/' 
@@ -40,6 +43,7 @@ settings:
   bbox: false
   show_orientation: true
   fruit_type: 'strawberry' # currently supported for "strawberry" or "tomato"
+  validation_period: 500 # Smaller validation will increase training time. The value is set to have 100 validation during training
 
 
  

@@ -5,12 +5,13 @@ import cv2
 import torch
 import detectron2.data.transforms as T
 from detectron2.data import DatasetMapper, build_detection_train_loader
+from detectron2.evaluation   import COCOEvaluator
 from detectron2.engine import DefaultTrainer
 from detectron2.projects.deeplab import  build_lr_scheduler
 from detectron2.data import detection_utils as utils
 from detectron2.config import CfgNode
 from detectron2.solver.build import get_default_optimizer_params, maybe_add_gradient_clipping
-import copy,yaml
+import copy,yaml,os
 
 #UZ: extended Default trainer to have methods for augmentation
 
@@ -126,3 +127,10 @@ class AOCTrainer(DefaultTrainer):
             image = cv2.cvtColor(image, cv2.COLOR_BGR2YUV)
             d["image"] = torch.as_tensor(image.transpose(2, 0, 1).astype("float32"))
         return dataset_dict
+
+    # UZ: Evaluator for validation during training
+    @classmethod
+    def build_evaluator(cls, cfg, dataset_name, output_folder=None):
+        if output_folder is None:
+            output_folder = os.path.join(cfg.OUTPUT_DIR, "inference")
+        return COCOEvaluator(dataset_name, cfg, True, output_folder)
