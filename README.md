@@ -63,16 +63,25 @@ The **config** folder contains two parameter files for specifying system charact
 ### Key parameters
 
 * **min_depth, max_depth**: Define the minimum and maximum depth values for the depth channel of the camera input.
-* **constant_depth_value**: Used when no depth image or channel is available. This value is assumed as the distance between the camera and the detected fruit, enabling 3D pose estimation. This is particularly useful for RGB cameras without depth estimation capabilities. Default value is 1.0 m.
+* **constant_depth_value**: Used when no depth image or channel is available. This value is assumed as the distance between the camera and the detected fruit, enabling 3D pose estimation. This is particularly useful for RGB cameras without depth estimation capabilities. The default value is 1.0 m.
 * **fruit_type**: Specifies the type of fruit to detect. Currently supported values are **"strawberry"** and **"tomato"**.
 * **pose3d_frame**: Sets the frame ID for the 3D poses of the detected fruits.
-* **pose3d_tf**: In some cases, camera_info message includes camera_frame rather than camera_optical_frame. In this case, the 3D pose estimated should be transformed from optical frame to camera frame. For transformation needed cases, set to `True`, otherwise keep as `False`. 
+* **pose3d_tf**: In some cases, camera_info message includes camera_frame rather than camera_optical_frame. In this case, the 3D pose estimated should be transformed from optical frame to camera frame. For transformation-needed cases, set it to `True`, otherwise keep it as `False`. 
 * **pub_verbose**: Publishes an annotated image as a `sensor_msgs/Image` message in the ROS2 framework.
 * **verbose**: Determines which annotations appear on the annotated image. A Boolean list specifies the visualization of the following annotations in order: `[centroid, bounding box, mask, coordinate frames, text]`.
 * **pub_markers**: To publish RViz markers in the ROS2 framework.
 * **use_ros**: Specifies whether the fruit detection framework is integrated with the ROS2 framework.
   * If `False`, images are taken from the `test_image_dir` directory specified in **non_ros_params.yaml**, and the annotated images and JSON annotation files are saved to `prediction_output_dir` and `prediction_json_dir` directories, respectively.
-  * If `True`, RGB and depth images are subscribed from camera topics, and annotations are published via ROS2 topics and as RViz markers.
+  * If `True`, RGB and depth images are subscribed from camera topics (`/camera/image_raw`, `/camera/depth` and `/camera/camera_info`), and annotations are published via ROS2 topics (`/fruit_info` and `/image_composed`) and as RViz markers (`/fruit_markers`).
+      * These topics can be remapped in `fruit_detection.launch.py` file.
+      * Input topics:
+          * `/camera/image_raw`: Maps to the rectified colour image topic provided by the camera. Using rectified colour images is important for 3D pose estimation accuracy.
+          * `/camera/depth`: Maps to the depth image topic of the camera. Using registered depth images is important for 3D pose estimation accuracy.
+          * `/camera/camera_info`: Maps to the camera intrinsic calibration information. For 3D pose estimation, camera intrinsic calibration information is essential. A default pinhole camera model is defined in the package, but for accurate pose estimation provide camera calibration data to the system.
+      * Output topics:
+          * `/fruit_info`: Contains information about detected fruits, including their positions and classifications. The message type is **FruitInfoArray**, a specific message type for the `aoc_fruit_detector` package.
+          * `/image_composed`: Publishes the composed image with annotations overlaid, such as bounding boxes and labels for detected fruits. The message type is **sensor_msgs/Image**. This message is not published if the `pub_verbose` parameter is False.
+          * `/fruit_markers`: Publishes 3D markers for detected fruits to be visualized in RViz. The message type is **visualization_msgs/MarkerArray**.
 
 Please note that annotated images and JSON annotation files are saved to the location where the package is installed. Check the **install** folder of the repository to find the annotation outputs.
 
