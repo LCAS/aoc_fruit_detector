@@ -97,6 +97,57 @@ class DetectronPredictor(LearnerPredictor):
             if(__debug__): print(traceback.format_exc())
             raise Exception(e)
         return data
+    
+    def get_rgb_predictions_image(self, rgb_image, output_json_file_path='',prediction_output_dir='',image_file_name='',sample_no=1,fruit_type=FruitTypes.Strawberry):
+        rgb_image = rgb_image[:, :, :3].astype(np.uint8)
+        image_size = rgb_image.shape
+        image_size = tuple(reversed(image_size[:-1]))
+        save_json_file = True
+        try:
+            outputs = self.predictor(rgb_image)
+            predictions = outputs["instances"].to("cpu")
+            vis_aoc = AOCVisualizer(rgb_image,
+                                    metadata=self.metadata[0],
+                                    scale=self.scale,
+                                    instance_mode=self.instance_mode,
+                                    colours=self.colours,
+                                    category_ids=self.list_category_ids,
+                                    masks=self.masks,
+                                    bbox=self.bbox,
+                                    show_orientation=self.show_orientation,
+                                    fruit_type=fruit_type
+                                    )
+            start_time = datetime.now()
+            drawn_predictions = vis_aoc.draw_instance_predictions(outputs["instances"].to("cpu"))
+            end_time = datetime.now()
+            predicted_image = drawn_predictions.get_image()[:, :, ::-1].copy()            
+            
+            pred_image_dir = os.path.join(prediction_output_dir, 'predicted_images')
+            if not os.path.exists(pred_image_dir):
+                os.makedirs(pred_image_dir)
+
+            if (self.rename_pred_images):
+                f_name=f'img_{str(sample_no).zfill(6)}.png'
+                overlay_fName = os.path.join(pred_image_dir, f_name)
+                file_dir, f = os.path.split(output_json_file_path)
+                image_file_name = f_name
+                f_name = f'img_{str(sample_no).zfill(6)}.json'
+                output_json_file_path = os.path.join(file_dir, f_name)
+
+            else:
+                file_dir, f_name = os.path.split(image_file_name)
+                overlay_fName = os.path.join(pred_image_dir, f_name)
+            cv2.imwrite(overlay_fName, cv2.cvtColor(predicted_image, cv2.COLOR_BGR2RGB))
+            delta=str(end_time - start_time)
+            print(f"Predicted image saved in output folder for file {overlay_fName}, Duration: {delta}")
+            json_writer = JSONWriter(rgb_image, self.metadata[0])
+            categories_info=self.metadata[1] # category info is saved as second list
+            predicted_json_ann=json_writer.create_prediction_json(predictions, output_json_file_path, image_file_name,categories_info,image_size,1,save_json_file)
+            return predicted_json_ann,predicted_image,[]
+        except Exception as e:
+            logging.error(e)
+            if(__debug__): print(traceback.format_exc())
+            raise Exception(e)
 
     def get_predictions_image(self, rgbd_image,output_json_file_path='',prediction_output_dir='',image_file_name='',sample_no=1,fruit_type=FruitTypes.Strawberry):
 
