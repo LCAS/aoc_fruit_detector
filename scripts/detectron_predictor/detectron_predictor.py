@@ -188,7 +188,25 @@ class DetectronPredictor(LearnerPredictor):
         except Exception as e:
             logging.error(e)
             raise Exception(e)
-
+    
+    def get_predictions_message_short(self, rgbd_image, image_id=0,fruit_type=FruitTypes.Strawberry):
+        rgb_image = rgbd_image[:, :, :3].astype(np.uint8)
+        output_json_file_path=''
+        image_size=rgb_image.shape
+        image_size = tuple(reversed(image_size[:-1]))
+        image_file_name= f'img_{str(image_id).zfill(6)}.png'
+        save_json_file=False
+        try:
+            outputs = self.predictor(rgb_image)
+            predictions = outputs["instances"].to("cpu")
+            json_writer = JSONWriter(rgb_image, self.metadata[0], fruit_type)
+            categories_info = self.metadata[1]  # category info is saved as second list
+            predicted_json_ann = json_writer.create_prediction_json(predictions, output_json_file_path,
+                                                                    image_file_name, categories_info, image_size, image_id, save_json_file)
+            return predicted_json_ann
+        except Exception as e:
+            logging.error(e)
+            raise Exception(e)
 
     def get_masks(self, fg_masks, rgb_image, depth_image):
 
