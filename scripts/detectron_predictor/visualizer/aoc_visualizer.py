@@ -112,10 +112,11 @@ class AOCVisualizer(Visualizer):
                     mask=segment.reshape(-1, 2)
                     theta, centroid,vector,vector2 = FruitOrientation.get_angle_pca(masks[i].mask,self.fruit_type)
                     height, width = masks[i].mask.shape  # Get mask dimensions
-                    scale_factor = min(width, height) / 1500
-                    x,y=centroid
-                    radius = int(10 * scale_factor)
-                    self.draw_polygon(mask, color, alpha=self.alpha,x=x,y=y,radius=radius,theta=theta,scale_factor=scale_factor,vector=vector)
+                    if (self.show_orientation):
+                        scale_factor = min(width, height) / 1500
+                        x,y=centroid
+                        radius = int(10 * scale_factor)
+                        self.draw_polygon(mask, color, alpha=self.alpha,x=x,y=y,radius=radius,theta=theta,scale_factor=scale_factor,vector=vector)
 
             if labels is not None:
                 # first get a box

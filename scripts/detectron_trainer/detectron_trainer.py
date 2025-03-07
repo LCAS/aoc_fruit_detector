@@ -27,11 +27,13 @@ class DetectronTrainer(LearnerTrainer):
         # UZ:dataset
         self.name_train                 = config_data['datasets']['train_dataset_name']
         self.name_test                  = config_data['datasets']['test_dataset_name']
+        self.name_validation            = config_data['datasets']['validation_dataset_name']
         # UZ:files
         self.model_file                 = config_data['files']['model_file']
         self.config_file                = config_data['files']['config_file']
         self.test_annotation_file       = config_data['files']['test_annotation_file']
         self.train_annotation_file      = config_data['files']['train_annotation_file']
+        self.validation_annotation_file = config_data['files']['validation_annotation_file']
         self.train_dataset_catalog_file = config_data['files']['train_dataset_catalog_file']
         self.test_metadata_catalog_file = config_data['files']['test_metadata_catalog_file']
         self.pretrained_model           = config_data['files']['pretrained_model_file']
@@ -39,9 +41,11 @@ class DetectronTrainer(LearnerTrainer):
         self.num_classes                = config_data['training']['number_of_classes']
         self.epochs                     = config_data['training']['epochs']
         self.learning_rate              = config_data['training']['learning_rate']
+        self.validation_period          = config_data['settings']['validation_period']
         # UZ:directories
         self.test_image_dir             = config_data['directories']['test_image_dir']
         self.train_image_dir            = config_data['directories']['train_image_dir']
+        self.validation_image_dir       = config_data['directories']['validation_image_dir']
         self.download_assets            = config_data['settings']['download_assets']
 
         if (self.download_assets):
@@ -51,6 +55,7 @@ class DetectronTrainer(LearnerTrainer):
         self.cfg = self._configure(self.epochs,self.learning_rate)
         self._register_train_dataset()
         self._register_test_dataset()
+        self._register_validation_dataset()
 
     def _configure(self, iterations=10000,
                   learning_rate=0.0025,num_workers=8,batch_size=8,batch_per_image=512,test_threshold=0.5):
@@ -70,7 +75,10 @@ class DetectronTrainer(LearnerTrainer):
 
         cfg.MODEL.ROI_HEADS.NUM_CLASSES = self.num_classes
         cfg.DATASETS.TRAIN = (self.name_train,)
-        cfg.DATASETS.TEST = (self.name_test,)
+        # UZ: During training TEST setting is actually validation, therefore we use validation dataset
+        # test dataset is used for evaluation after training is completed
+        cfg.DATASETS.TEST = (self.name_validation,)
+        cfg.TEST.EVAL_PERIOD = self.validation_period # evaluation period after which validation will be performed
         cfg.DATALOADER.NUM_WORKERS = num_workers
         cfg.SOLVER.IMS_PER_BATCH = batch_size
         cfg.SOLVER.BASE_LR = learning_rate
@@ -103,6 +111,16 @@ class DetectronTrainer(LearnerTrainer):
         except Exception as e:
             logging.error(e)
             if(__debug__): print(traceback.format_exc())
+            raise Exception(e)
+
+    def _register_validation_dataset(self):
+        try:
+            validation_dataset_catalog = MetadataCatalog.get(self.name_validation)
+            validation_dataset_catalog.thing_colors = [(0, 255, 0), (255, 0, 0)]
+            register_coco_instances(self.name_validation, {}, self.validation_annotation_file, self.validation_image_dir)
+        except Exception as e:
+            logging.error(e)
+            if (__debug__): print(traceback.format_exc())
             raise Exception(e)
 
     def train_model(self, resumeType=False,skipTraining=False)->DefaultTrainer:
