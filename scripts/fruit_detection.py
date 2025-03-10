@@ -507,12 +507,12 @@ class FruitDetectionNode(Node):
                 else:
                     fruit_msg._ripeness_level = 0.15
                 fruit_msg.area = area
-                fruit_msg.volume = area*2
-                fruit_msg.bbox = bbox
-                fruit_msg.bvol = bbox
+                fruit_msg.volume = area*2 # AY: To be developed
+                fruit_msg.bbox = bbox 
+                fruit_msg.bvol = bbox # AY: To be developed
                 fruit_msg.mask2d = segmentation
                 fruit_msg.pose2d = self.compute_pose2d(fruit_id, pose_dict)
-                fruit_msg.mask3d = segmentation
+                fruit_msg.mask3d = segmentation # AY: To be developed
                 fruit_msg.pose3d = self.compute_pose3d(fruit_msg.pose2d, depth_image)
                 fruit_msg.confidence = float(confidence_dict.get(fruit_id, '-1.0'))
                 fruit_msg.occlusion_level = 0.88
