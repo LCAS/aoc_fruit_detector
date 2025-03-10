@@ -45,6 +45,8 @@ class DetectronPredictor(LearnerPredictor):
         self.masks                  = config_data['settings']['segm_masks']
         self.list_category_ids      = list()
         self.colours                = None
+        self.CONFIDENCE_THRESHOLD   = config_data['settings']['confidence_threshold']
+        self.CONFIDENCE_THRESHOLD   = max(0, min(self.CONFIDENCE_THRESHOLD, 1)) # ensure the value is between 0 and 1
 
 
         if (self.download_assets):
@@ -108,6 +110,12 @@ class DetectronPredictor(LearnerPredictor):
         try:
             outputs = self.predictor(rgb_image)
             predictions = outputs["instances"].to("cpu")
+
+            scores = predictions.scores
+            keep = scores > self.CONFIDENCE_THRESHOLD
+            indices = keep.nonzero(as_tuple=True)[0]  # Get valid indices
+            predictions = predictions[indices]
+
             vis_aoc = AOCVisualizer(rgb_image,
                                     metadata=self.metadata[0],
                                     scale=self.scale,
@@ -120,7 +128,7 @@ class DetectronPredictor(LearnerPredictor):
                                     fruit_type=fruit_type
                                     )
             start_time = datetime.now()
-            drawn_predictions = vis_aoc.draw_instance_predictions(outputs["instances"].to("cpu"))
+            drawn_predictions = vis_aoc.draw_instance_predictions(predictions)
             end_time = datetime.now()
             predicted_image = drawn_predictions.get_image()[:, :, ::-1].copy()
 
@@ -164,6 +172,12 @@ class DetectronPredictor(LearnerPredictor):
         try:
             outputs = self.predictor(rgb_image)
             predictions = outputs["instances"].to("cpu")
+
+            scores = predictions.scores
+            keep = scores > self.CONFIDENCE_THRESHOLD
+            indices = keep.nonzero(as_tuple=True)[0]  # Get valid indices
+            predictions = predictions[indices]
+
             vis_aoc = AOCVisualizer(rgb_image,
                                     metadata=self.metadata[0],
                                     scale=self.scale,
@@ -174,7 +188,7 @@ class DetectronPredictor(LearnerPredictor):
                                     show_orientation=False,   # UZ: Set to false
                                     fruit_type=fruit_type,
                                     )
-            drawn_predictions = vis_aoc.draw_instance_predictions(outputs["instances"].to("cpu"))
+            drawn_predictions = vis_aoc.draw_instance_predictions(predictions)
             predicted_image = drawn_predictions.get_image()[:, :, ::-1].copy()
             depth_masks, rgb_masks = self.get_masks(predicted_image, rgb_image, depth_image)
             json_writer = JSONWriter(rgb_image, self.metadata[0],fruit_type)
@@ -196,6 +210,12 @@ class DetectronPredictor(LearnerPredictor):
         try:
             outputs = self.predictor(rgb_image)
             predictions = outputs["instances"].to("cpu")
+            
+            scores = predictions.scores
+            keep = scores > self.CONFIDENCE_THRESHOLD
+            indices = keep.nonzero(as_tuple=True)[0]  # Get valid indices
+            predictions = predictions[indices]
+
             json_writer = JSONWriter(rgb_image, self.metadata[0], fruit_type)
             categories_info = self.metadata[1]  # category info is saved as second list
             predicted_json_ann = json_writer.create_prediction_json(predictions, output_json_file_path,

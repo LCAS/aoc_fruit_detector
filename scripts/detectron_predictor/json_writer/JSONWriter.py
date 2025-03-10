@@ -123,7 +123,7 @@ class JSONWriter(Visualizer):
         self._instance_mode = instance_mode
         self.fruit_type=fruit_type
 
-    def create_prediction_json(self, predictions, output_json_file_path,input_file_names,categories_info,image_size,image_id=1):
+    def create_prediction_json(self, predictions, output_json_file_path,input_file_names,categories_info,image_size,image_id=1,save_json_file=False):
 
         image_list = list()
         category_list = list()
@@ -141,7 +141,6 @@ class JSONWriter(Visualizer):
 
         for input_file_name in input_file_names:
             head,filename = os.path.split(input_file_name)
-
             #    continue
             if (len(predictions.pred_boxes)==0):
                 return None
@@ -161,8 +160,9 @@ class JSONWriter(Visualizer):
         
         json_output_dict = {**dict_info, **dict_license, **dict_images,**dict_annotations,**dict_confidence,**dict_orientation,**dict_category}
         # UZ: call self._write_to_file for dumping to file
-        if(__debug__):
+        if __debug__ or save_json_file:
             self._write_to_file(output_json_file_path, json_output_dict)
+            print(f"Predicted json file is saved to {output_json_file_path}")
         return json_output_dict
 
     def _write_to_file(self,output_json_file_path,json_output_dict):
