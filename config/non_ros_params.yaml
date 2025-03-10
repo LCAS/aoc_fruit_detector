@@ -45,5 +45,8 @@ settings:
   fruit_type: 'strawberry' # currently supported for "strawberry" or "tomato"
   validation_period: 500 # Smaller validation will increase training time. The value is set to have 100 validation during training
   confidence_threshold: 0.9 # removes annotations with confidence score lower than this value
+  filename_patterns: 
+    rgb: "image" 
+    depth: "depth" # filename patterns for rgb and depth images
 
  

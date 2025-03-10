@@ -76,6 +76,7 @@ class FruitDetectionNode(Node):
                     self.fruit_type=FruitTypes.Tomato
                 else:
                     self.fruit_type=FruitTypes.Strawberry
+                self.filename_patterns = config_data['settings']['filename_patterns']
         else:
             raise FileNotFoundError(f"No config file found in any ' {self.package_name}/config/' folder within {os.getcwd()}")
 
@@ -84,6 +85,7 @@ class FruitDetectionNode(Node):
         self.max_depth = self.get_parameter('max_depth').value
 
         if self.use_ros:
+            self.get_logger().info(f"ROS2 pipeline is active")
             self.tf_buffer = tf2_ros.Buffer()
             self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
             # Get parameter values from ROS2 network
@@ -140,15 +142,19 @@ class FruitDetectionNode(Node):
             self.publisher_fruit = self.create_publisher(FruitInfoArray, 'fruit_info', 5)
             self.publisher_comp = self.create_publisher(Image, 'image_composed', 5)
             self.publisher_3dmarkers = self.create_publisher(MarkerArray, 'fruit_markers', 5)
-        else: 
+        else:
+            self.get_logger().info(f"Non-ROS configuration is active") 
             all_files = sorted([f for f in os.listdir(self.image_dir) if os.path.isfile(os.path.join(self.image_dir, f))])
 
-            rgb_files = sorted([f for f in all_files if 'image' in f])
-            depth_files = sorted([f for f in all_files if 'depth' in f])
+            RGB_PATTERN = self.filename_patterns['rgb']
+            DEPTH_PATTERN = self.filename_patterns['depth']
+
+            rgb_files = sorted([f for f in all_files if RGB_PATTERN in f])
+            depth_files = sorted([f for f in all_files if DEPTH_PATTERN in f])
 
             sample_no = 1
             for rgb_file in rgb_files:
-                corr_depth_file = rgb_file.replace('image', 'depth', 1)
+                corr_depth_file = rgb_file.replace(RGB_PATTERN, DEPTH_PATTERN, 1)
 
                 if corr_depth_file in depth_files:
                     image_file_name=os.path.join(self.image_dir, rgb_file)

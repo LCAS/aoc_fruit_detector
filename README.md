@@ -92,6 +92,7 @@ The **config** folder contains two parameter files for specifying system charact
 * **show_orientation**: To visualise orientation information on the annotated images, set this parameter to True.
 * **fruit_type**: Specifies the type of fruit to detect. Currently supported values are **"strawberry"** and **"tomato"**.
 * **confidence_threshold**: To remove annotations with low confidence score, define a threshold within the valid range [0, 1] by setting this parameter. 
+* **filename_patterns**: To set the filename pattern for RGB and depth images use **rgb** and **depth** clusters of the parameter. 
 
 Please note that annotated images and JSON annotation files are saved to the location where the package is installed. Check the **install** folder of the repository to find the annotation outputs.
 
