@@ -163,7 +163,16 @@ class FruitDetectionNode(Node):
                         prediction_json_output_file = os.path.join(self.prediction_json_dir, filename)+'.json'
                     self.det_predictor.get_predictions_image(rgbd_image, prediction_json_output_file, self.prediction_output_dir, image_file_name, sample_no, self.fruit_type)
                 else:
-                    self.get_logger().warn(f"Warning: No corresponding depth file: {corr_depth_file} for rgb file: {rgb_file}")
+                    self.get_logger().warn(f"Warning: No corresponding depth file: {corr_depth_file} for rgb file: {rgb_file}.\nPredicting using rgb only.")
+                    image_file_name=os.path.join(self.image_dir, rgb_file)
+                    rgb_image = cv2.imread(image_file_name)  # bgr8
+                    filename, extension = os.path.splitext(rgb_file)
+                    if (self.prediction_json_dir!=""):
+                        os.makedirs(self.prediction_json_dir, exist_ok=True)
+                        prediction_json_output_file = os.path.join(self.prediction_json_dir, filename)+'.json'
+                    
+                    self.det_predictor.get_rgb_predictions_image(rgb_image, prediction_json_output_file, self.prediction_output_dir, image_file_name, sample_no, self.fruit_type)
+                    
                 sample_no += 1
 
     def compute_pose2d(self, annotation_id, pose_dict):
