@@ -60,7 +60,7 @@ The **config** folder contains two parameter files for specifying system charact
 * **ros_params.yaml** allows tuning of ROS framework parameters.
 * **non_ros_params.yaml** contains parameters for the fruit detection module.
 
-### Key parameters
+### Key ROS2 parameters
 
 * **min_depth, max_depth**: Define the minimum and maximum depth values for the depth channel of the camera input.
 * **constant_depth_value**: Used when no depth image or channel is available. This value is assumed as the distance between the camera and the detected fruit, enabling 3D pose estimation. This is particularly useful for RGB cameras without depth estimation capabilities. The default value is 1.0 m.
@@ -82,6 +82,16 @@ The **config** folder contains two parameter files for specifying system charact
           * `/fruit_info`: Contains information about detected fruits, including their positions and classifications. The message type is **FruitInfoArray**, a specific message type for the `aoc_fruit_detector` package.
           * `/image_composed`: Publishes the composed image with annotations overlaid, such as bounding boxes and labels for detected fruits. The message type is **sensor_msgs/Image**. This message is not published if the `pub_verbose` parameter is False.
           * `/fruit_markers`: Publishes 3D markers for detected fruits to be visualized in RViz. The message type is **visualization_msgs/MarkerArray**.
+
+### Key AOC Fruit Detector parameters
+
+* **download_assets**: If assets such as model and datasets should be downloaded, set it to True. Running system properly in the first trial, it is recommended to download assets.
+* **rename_pred_images**: To rename the predicted images in img_000001.png like format, set this parameter to True.
+* **segm_masks**: To visualise segmentation mask on the annotated images, set this parameter to True.
+* **bbox**: To visualise bounding box mask on the annotated images, set this parameter to True.
+* **show_orientation**: To visualise orientation information on the annotated images, set this parameter to True.
+* **fruit_type**: Specifies the type of fruit to detect. Currently supported values are **"strawberry"** and **"tomato"**.
+* **confidence_threshold**: To remove annotations with low confidence score, define a threshold within the valid range [0, 1] by setting this parameter. 
 
 Please note that annotated images and JSON annotation files are saved to the location where the package is installed. Check the **install** folder of the repository to find the annotation outputs.
 
