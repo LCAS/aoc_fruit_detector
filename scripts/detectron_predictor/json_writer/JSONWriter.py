@@ -133,7 +133,7 @@ class JSONWriter(Visualizer):
 
 
         # UZ: if input filename is string (only one name) then make it list
-
+        ann_list, conf_list, orientation_list = [], [], []
         if type(input_file_names) is str:
             str_holder=input_file_names
             input_file_names=list()
@@ -143,7 +143,16 @@ class JSONWriter(Visualizer):
             head,filename = os.path.split(input_file_name)
             #    continue
             if (len(predictions.pred_boxes)==0):
-                return None
+                # If no predictions, still return a valid JSON structure
+                json_output_dict = {
+                    **dict_info, **dict_license,
+                    "images": image_list,
+                    "annotations": ann_list,
+                    "confidence": conf_list,
+                    "orientation": orientation_list,
+                    **dict_category
+                }
+                return json_output_dict
             if not __debug__:
                 image_id_string=f'{str(image_id).zfill(6)}'
             else:
