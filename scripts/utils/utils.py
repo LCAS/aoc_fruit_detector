@@ -1,5 +1,6 @@
 """
 Started by: Usman Zahidi (uz) {20/08/24}
+Updated by: Abdurrahman Yilmaz (ayilmaz@lincoln.ac.uk) {07/04/25}
 """
 # general imports
 import os,logging,traceback
@@ -83,3 +84,52 @@ class LearnerUtils:
             if(__debug__): print(traceback.format_exc())
             raise Exception(e)
 
+# ------------------------------------
+# General utility functions by ayilmaz
+# ------------------------------------
+
+def find_path(name, search_root='.', search_type='any'):
+    """
+    Search for a file, directory, or any (file or folder) within a given root.
+    :param name: Name to search for (relative path or file/directory name)
+    :param search_root: Where to start searching from
+    :param search_type: 'file', 'dir', or 'any'
+    :return: Full path if found, else None
+    """
+    print(f"Searching for '{name}' under '{search_root}' (type: {search_type})...")
+
+    # Normalize name
+    name = os.path.normpath(name)
+
+    for root, dirs, files in os.walk(search_root):
+        candidate_path = os.path.join(root, name)
+
+        if search_type == 'file' and name in files:
+            print(f"Found file: {os.path.join(root, name)}")
+            return os.path.join(root, name)
+
+        if search_type == 'dir' and name in dirs:
+            print(f"Found directory: {os.path.join(root, name)}")
+            return os.path.join(root, name)
+
+        if search_type == 'any':
+            if os.path.isfile(candidate_path) or os.path.isdir(candidate_path):
+                print(f"Found path: {candidate_path}")
+                return candidate_path
+
+    print("Not found.")
+    return None
+
+def find_workspace_root(root_folder_name='fruit_detector_ws'):
+    """
+    Find the root directory of a workspace by its folder name.
+    """
+    current_dir = os.getcwd()
+    parts = current_dir.split(os.sep)
+
+    if root_folder_name not in parts:
+        raise FileNotFoundError(f"'{root_folder_name}' not found in the current working directory path '{current_dir}'")
+
+    root_index = parts.index(root_folder_name)
+    workspace_root = os.sep.join(parts[:root_index + 1])
+    return workspace_root
