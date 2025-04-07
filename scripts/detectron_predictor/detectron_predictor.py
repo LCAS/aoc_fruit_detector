@@ -108,6 +108,12 @@ class DetectronPredictor(LearnerPredictor):
         try:
             outputs = self.predictor(rgb_image)
             predictions = outputs["instances"].to("cpu")
+
+            scores = predictions.scores
+            keep = scores > self.CONFIDENCE_THRESHOLD
+            indices = keep.nonzero(as_tuple=True)[0]  # Get valid indices
+            predictions = predictions[indices]
+
             vis_aoc = AOCVisualizer(rgb_image,
                                     metadata=self.metadata[0],
                                     scale=self.scale,
@@ -120,7 +126,7 @@ class DetectronPredictor(LearnerPredictor):
                                     fruit_type=fruit_type
                                     )
             start_time = datetime.now()
-            drawn_predictions = vis_aoc.draw_instance_predictions(outputs["instances"].to("cpu"))
+            drawn_predictions = vis_aoc.draw_instance_predictions(predictions)
             end_time = datetime.now()
             predicted_image = drawn_predictions.get_image()[:, :, ::-1].copy()            
             
