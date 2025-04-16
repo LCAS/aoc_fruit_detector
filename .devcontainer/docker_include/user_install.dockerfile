@@ -32,6 +32,11 @@ RUN pip install --no-cache-dir \
 # COPY requirements.txt ${COLCON_WS}/src/requirements.txt
 # RUN pip install -r ${COLCON_WS}/src/requirements.txt && rm ${COLCON_WS}/src/requirements.txt
 
+
+RUN pip install nvfuser-cu118-torch24
+RUN export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/python3.10/dist-packages/torch/lib:$LD_LIBRARY_PATH
+
+
 USER $USER
 
 # Copy the script to checkout public git repos and make it executable
