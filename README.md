@@ -114,6 +114,7 @@ AOC Fruit Detector includes a visual GUI for editing YAML configurations and lau
 From inside the container:
 
 ```bash
+cd fruit_detector_ws/
 python src/aoc_fruit_detector/gui_predic_trainer/main.py
 ```
 
