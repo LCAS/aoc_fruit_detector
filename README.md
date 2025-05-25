@@ -96,6 +96,37 @@ The **config** folder contains two parameter files for specifying system charact
 
 Please note that annotated images and JSON annotation files are saved to the location where the package is installed. Check the **install** folder of the repository to find the annotation outputs.
 
+## 🖥️ Using the Graphical User Interface (GUI)
+
+AOC Fruit Detector includes a visual GUI for editing YAML configurations and launching predictions or training tasks without directly modifying YAML files.
+
+### Features
+
+- Edit all YAML parameters in a structured, visual layout
+- Select between ROS and non-ROS prediction modes
+- Launch model training or prediction with a button
+- Tooltips available for every parameter
+- Required fields are marked with a red `*`
+- Shows result statistics and prediction output paths
+
+### How to run the GUI
+
+From inside the container or virtual environment:
+
+```bash
+python src/aoc_fruit_detector/gui_predic_trainer/main.py
+```
+
+This will launch the GUI.
+
+### GUI Screenshot
+
+Make sure the following image exists in your repo at `docs/gui_screenshot.png`:
+
+![GUI screenshot](./gui_predic_trainer/assets/gui_screenshot.png)
+
+---
+
 ## Wiki
 
 To get more information about the AOC Fruit Detector, please refer to [Wiki page][wiki_page]

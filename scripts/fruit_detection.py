@@ -143,7 +143,10 @@ class FruitDetectionNode(Node):
             self.publisher_comp = self.create_publisher(Image, 'image_composed', 5)
             self.publisher_3dmarkers = self.create_publisher(MarkerArray, 'fruit_markers', 5)
         else:
-            self.get_logger().info(f"Non-ROS configuration is active") 
+            self.get_logger().info(f"Non-ROS configuration is active")
+            # Variables are added to count the number of predicted images and those that did not have objects to predict
+            self.predicted_images = 0
+            self.skipped_images = 0
             all_files = sorted([f for f in os.listdir(self.image_dir) if os.path.isfile(os.path.join(self.image_dir, f))])
 
             RGB_PATTERN = self.filename_patterns['rgb']
@@ -167,7 +170,12 @@ class FruitDetectionNode(Node):
                     if (self.prediction_json_dir!=""):
                         os.makedirs(self.prediction_json_dir, exist_ok=True)
                         prediction_json_output_file = os.path.join(self.prediction_json_dir, filename)+'.json'
-                    self.det_predictor.get_predictions_image(rgbd_image, prediction_json_output_file, self.prediction_output_dir, image_file_name, sample_no, self.fruit_type)
+                    # the number of predicted and unpredicted images is counted
+                    predicted_json_ann, _, _ = self.det_predictor.get_predictions_image(rgbd_image, prediction_json_output_file, self.prediction_output_dir, image_file_name, sample_no, self.fruit_type)
+                    if predicted_json_ann.get("annotations"):
+                        self.predicted_images += 1
+                    else:
+                        self.skipped_images += 1
                 else:
                     self.get_logger().warn(f"Warning: No corresponding depth file: {corr_depth_file} for rgb file: {rgb_file}.\nPredicting using rgb only.")
                     image_file_name=os.path.join(self.image_dir, rgb_file)
@@ -176,10 +184,24 @@ class FruitDetectionNode(Node):
                     if (self.prediction_json_dir!=""):
                         os.makedirs(self.prediction_json_dir, exist_ok=True)
                         prediction_json_output_file = os.path.join(self.prediction_json_dir, filename)+'.json'
-                    
-                    self.det_predictor.get_rgb_predictions_image(rgb_image, prediction_json_output_file, self.prediction_output_dir, image_file_name, sample_no, self.fruit_type)
-                    
+                    # the number of predicted and unpredicted images is counted
+                    predicted_json_ann, _, _ = self.det_predictor.get_rgb_predictions_image(rgb_image, prediction_json_output_file, self.prediction_output_dir, image_file_name, sample_no, self.fruit_type)
+                    if predicted_json_ann.get("annotations"):
+                        self.predicted_images += 1
+                    else:
+                        self.skipped_images += 1
                 sample_no += 1
+
+
+            # End the node after processing all images
+            print(f"Total processed images: {sample_no-1}")
+            print(f"Images with predictions: {self.predicted_images}")
+            print(f"Images without predictions: {self.skipped_images}")
+            
+            self.get_logger().info("All predictions have finished. Closing node.")
+
+            os._exit(0) # End the process immediately
+
 
     def compute_pose2d(self, annotation_id, pose_dict):
         """
@@ -369,7 +391,7 @@ class FruitDetectionNode(Node):
         except Exception as e:
             self.get_logger().error(f"Error processing depth image: {e}")
     
-    def create_confidence_dict(self, confidence_list):
+    def create_confidence_dict(self, confidencee_list):
         # Create a dictionary with annotation_id as the key and confidence as the value
         return {entry['annotation_id']: entry['confidence'] for entry in confidence_list}
 
