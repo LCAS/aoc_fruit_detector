@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - configFile: .devcontainer/cuda-opengl/devcontainer.json
+          - configFile: .devcontainer/devcontainer.json
             imageTag: cuda-opengl-hri
     steps:
       - name: Node Js

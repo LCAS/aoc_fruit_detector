@@ -2,5 +2,5 @@ repositories:
   detectron2:
     type: git
     url: https://github.com/facebookresearch/detectron2.git
-    version: main
+    version: 754469e176b224d17460612bdaa2cb8112b04cd9
     depth: 1

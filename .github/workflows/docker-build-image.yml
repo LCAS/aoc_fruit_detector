@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - base_image: lcas.lincoln.ac.uk/lcas/ros:jammy-humble-cuda11.8-opengl
+          - base_image: lcas.lincoln.ac.uk/lcas/ros-docker-images:jammy-cuda11.8-humble-2
             ros_distro: humble
             push_image: lcas.lincoln.ac.uk/lcas/aoc_fruit_detector
   
@@ -47,9 +47,13 @@ jobs:
         # list of Docker images to use as base name for tags
         images: |
           ${{ matrix.push_image }}
+        flavor: |
+          latest=auto
         tags: |
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}}
           type=ref,event=branch,pattern=main
-          latest
 
     - name: Build Public Docker Image
       uses: docker/build-push-action@v6
@@ -60,8 +64,7 @@ jobs:
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta_public.outputs.tags }}
         labels: ${{ steps.meta_public.outputs.labels }}
-        target: user_space
-        #tags: ${{ matrix.push_image }},${{ matrix.push_image }}-${{ env.BRANCH }}
+        target: deployed
         build-args: |
             BASE_IMAGE=${{ matrix.base_image }}
             BRANCH=${{ env.BRANCH }}

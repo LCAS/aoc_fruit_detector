@@ -4,12 +4,17 @@
 
 {
 	// Define the container name for easy identification
-	"name": "L-CAS Humble CUDA-OpenGL Devcontainer",
+	"name": "L-CAS Humble CUDA-OpenGL Devcontainer for AOC Fruit Detector",
 	
-	// Specify the Docker Compose file(s) required to set up the dev container
-	"dockerComposeFile": ["../docker-compose.yml"],
-	"service": "fruit_detector",  // Define the main service to use in the container
+	// Use Dockerfile directly instead of docker-compose
+	"build": {
+		"dockerfile": "./Dockerfile",
+		"context": "..",
+		"target": "final"
+	},
 	"workspaceFolder": "/home/ros/fruit_detector_ws/",  // Path to the workspace within the container
+	"workspaceMount": "source=${localWorkspaceFolder},target=/home/ros/fruit_detector_ws/src,type=bind",  // Mount local workspace into the container
+	//"workspaceFolder": "/home/ros/fruit_detector_ws/",  // Path to the workspace within the container
 
 	// Forward specific ports from the container to the host machine
 	"forwardPorts": [5801],  // Port for remote desktop access
@@ -26,17 +31,39 @@
 	// "postCreateCommand": "sudo src/aoc_fruit_detector/.devcontainer/scripts/post-create.sh'",
 
 	// Define environment variables to facilitate mounting local source code
-	"remoteEnv": {
-		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"  // Sets local workspace path in the container
-	},
+	// "remoteEnv": {
+	// 	"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"  // Sets local workspace path in the container
+	// },
 	
 	"remoteUser": "ros",  // Set the default user inside the container
 	"updateRemoteUserUID": true,  // Align container user UID with host user for permission consistency
-	"shutdownAction": "stopCompose",  // Gracefully stop the Compose environment on shutdown
+	
+	"capAdd": ["NET_ADMIN"],
+	
+	// Container environment variables
+	"containerEnv": {
+		"HOST_USER": "${localEnv:USER}",
+		"HOST_HOSTNAME": "${localEnv:HOSTNAME}"
+	},
+	
+	// Mount additional volumes
+	"mounts": [
+		"source=/etc/timezone,target=/etc/timezone,type=bind,readonly",
+		"source=/etc/localtime,target=/etc/localtime,type=bind,readonly",
+		"source=/media,target=/media,type=bind"
+	],
+	
+	// Initialize command to set up networking
+	"initializeCommand": "echo 'Setting up devcontainer...'",
+	"postStartCommand": "/opt/entrypoint.sh /bin/true; ./src/.devcontainer/scripts/post-create.sh",  // Run post-create script to set up the environment
 
 	// VS Code customizations: Install specific extensions on container startup
 	"customizations": {
 		"vscode": {
+			"settings": {
+				"git.defaultCloneDirectory": "/home/ros/fruit_detector_ws/src",
+				"git.repositorySearchMaxDepth": 2
+			},
 			"extensions": [
 				"ms-python.python",  // Python support
 				"GitHub.vscode-pull-request-github",  // GitHub pull request and issue support
@@ -50,9 +77,7 @@
 	},
 
 	// Define minimum requirements for the host machine when running this container
-	// "hostRequirements": {
-	// 	"gpu": "optional",  // GPU support is optional, useful for CUDA if available
-	// 	"cpus": 2,  // Minimum 2 CPU cores recommended
-	// 	"memory": "8gb"  // Minimum 8GB RAM recommended
-	// }
+	"hostRequirements": {
+		"gpu": "optional"  // GPU support is optional, useful for CUDA if available
+	}
 }
