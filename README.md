@@ -103,3 +103,25 @@ To get more information about the AOC Fruit Detector, please refer to [Wiki page
 ---
 
 [wiki_page]: https://github.com/LCAS/aoc_fruit_detector/wiki
+
+
+
+## Pretrained Models and Configuration
+
+### Model ↔ Class Mapping
+Each pretrained model expects a specific number of classes.
+When loading a model, `cfg.MODEL.ROI_HEADS.NUM_CLASSES` must match
+the number of classes used during training.
+
+| Model file                         | Task            | num_classes | Metadata file |
+|----------------------------------|-----------------|-------------|---------------|
+| aoc_ripeness.pth                  | Ripeness        | 2           | metadata.pkl  |
+| aoc_strawberry_class_fruit.pth    | Fruit detection | X           | Not provided  |
+
+⚠️ Currently, metadata files are only provided for the ripeness model.
+
+### Backbone Configuration
+The default backbone is:
+COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml
+
+Other Detectron2 backbones may work, but have not been officially tested.
