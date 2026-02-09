@@ -9,4 +9,4 @@ aoc_fruit_detector:
     verbose: [True, True, True, True, True] # To draw [centroid, bbox, mask, coordinate frames, text] annotations on image
     pub_verbose: True # To publish annotated image
     pub_markers: True # To publish RViz markers
-    use_ros: True # To subscribe RGBD data and publish output from/on ROS2 framework
+    use_ros: False # To subscribe RGBD data and publish output from/on ROS2 framework

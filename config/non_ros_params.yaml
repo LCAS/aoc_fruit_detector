@@ -6,9 +6,9 @@ datasets:
   train_dataset_name: 'aoc_train_dataset'
   test_dataset_name: 'aoc_test_dataset'
   validation_dataset_name: 'aoc_validation_dataset'
-  dataset_train_annotation_url: 'https://lncn.ac/aocanntrain' 
+  dataset_train_annotation_url: 'https://lncn.ac/aocanntrain'
   dataset_train_images_url: 'https://lncn.ac/aocdatatrain'
-  dataset_test_annotation_url: 'https://lncn.ac/aocanntest' 
+  dataset_test_annotation_url: 'https://lncn.ac/aocanntest'
   dataset_test_images_url: 'https://lncn.ac/aocdatatest'
 files:
   # pretrained model used as a training base model, if set as empty, the config file will use imagenet trained model as base.
@@ -26,11 +26,11 @@ files:
   train_catalog_url: 'https://lncn.ac/aoccat'
 directories:
   train_image_dir: './data/strawberry_dataset/train/'
-  test_image_dir: './data/bag/rgbd/' #'./data/strawberry_dataset/test/'
+  test_image_dir: '/home/ros/fruit_detector_ws/src/aoc_fruit_detector/scripts/data/bag/rgbd' #'./data/strawberry_dataset/test/'
   validation_image_dir: './data/tomato_dataset/val/'
   training_output_dir: './data/training_output/'
-  prediction_output_dir: './data/prediction_output/test_images/'
-  prediction_json_dir: './data/annotations/predicted/' 
+  prediction_output_dir: '/home/ros/fruit_detector_ws/src/aoc_fruit_detector/scripts/data'
+  prediction_json_dir: '/home/ros/fruit_detector_ws/src/aoc_fruit_detector/scripts/data'
 training:
   epochs: 40000
   number_of_classes: 2
@@ -44,9 +44,8 @@ settings:
   show_orientation: true
   fruit_type: 'strawberry' # currently supported for "strawberry" or "tomato"
   validation_period: 500 # Smaller validation will increase training time. The value is set to have 100 validation during training
-  confidence_threshold: 0.9 # removes annotations with confidence score lower than this value
-  filename_patterns: 
-    rgb: "image" 
-    depth: "depth" # filename patterns for rgb and depth images
+  confidence_threshold: 0.5 # removes annotations with confidence score lower than this value
+  filename_patterns:
+    rgb: "_rgb"
+    depth: "_depth" # filename patterns for rgb and depth images
 
- 
