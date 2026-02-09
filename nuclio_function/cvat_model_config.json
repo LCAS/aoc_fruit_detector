@@ -1,0 +1,74 @@
+{
+  "name": "AOC Fruit Detector",
+  "type": "detector", 
+  "framework": "custom",
+  "spec": {
+    "url": "http://your-nuclio-endpoint/",
+    "labels": [
+      {
+        "name": "strawberry",
+        "color": "#FF0000",
+        "attributes": [
+          {
+            "name": "ripeness_category",
+            "input_type": "select",
+            "values": ["Unripe", "Ripe", "Overripe"],
+            "default_value": "Ripe"
+          },
+          {
+            "name": "quality", 
+            "input_type": "select",
+            "values": ["High", "Medium", "Low"],
+            "default_value": "High"
+          }
+        ]
+      },
+      {
+        "name": "strawberry_ripe",
+        "color": "#FF4444",
+        "attributes": []
+      },
+      {
+        "name": "strawberry_unripe", 
+        "color": "#FF8888",
+        "attributes": []
+      },
+      {
+        "name": "strawberry_overripe",
+        "color": "#AA0000", 
+        "attributes": []
+      },
+      {
+        "name": "tomato",
+        "color": "#00FF00",
+        "attributes": [
+          {
+            "name": "ripeness_category",
+            "input_type": "select", 
+            "values": ["Unripe", "Ripe", "Overripe"],
+            "default_value": "Ripe"
+          }
+        ]
+      },
+      {
+        "name": "tomato_ripe",
+        "color": "#44FF44",
+        "attributes": []
+      },
+      {
+        "name": "tomato_unripe",
+        "color": "#88FF88", 
+        "attributes": []
+      },
+      {
+        "name": "tomato_overripe",
+        "color": "#00AA00",
+        "attributes": []
+      }
+    ],
+    "model_config": {
+      "confidence_threshold": 0.5,
+      "max_detections": 100
+    }
+  }
+}

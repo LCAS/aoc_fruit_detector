@@ -1,0 +1,50 @@
+apiVersion: "nuclio.io/v1beta1"
+kind: "NuclioFunction"
+metadata:
+  name: aoc-fruit-detector
+  namespace: nuclio
+spec:
+  description: "AOC Fruit Detector serverless function for CVAT integration"
+  handler: "main:handler"
+  runtime: "python:3.9"
+  
+  build:
+    path: "."
+    functionSourceCode: ""
+    
+  image: "aoc-fruit-detector:latest"
+  
+  minReplicas: 1
+  maxReplicas: 3
+  
+  targetCPU: 75
+  
+  env:
+    - name: ROS_DOMAIN_ID
+      value: "0"
+    - name: RMW_IMPLEMENTATION  
+      value: "rmw_cyclonedx_cpp"
+    
+  triggers:
+    http:
+      kind: "http"
+      attributes:
+        port: 8080
+        
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+      
+  platform:
+    attributes:
+      restartPolicy:
+        name: always
+        
+  readinessTimeoutSeconds: 60
+  
+  annotations:
+    nuclio.io/project-name: "cvat"

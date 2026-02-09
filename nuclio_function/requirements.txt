@@ -1,0 +1,14 @@
+# Core dependencies
+numpy>=1.21.0
+opencv-python>=4.5.0
+Pillow>=8.3.0
+
+# Additional utilities  
+requests>=2.26.0
+
+# Note: ROS2 dependencies are installed via apt in the Dockerfile
+# - rclpy
+# - sensor_msgs  
+# - geometry_msgs
+# - std_msgs
+# - cv_bridge

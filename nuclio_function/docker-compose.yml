@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # AOC Fruit Detector ROS2 Node
+  fruit-detector:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    container_name: aoc-fruit-detector
+    environment:
+      - ROS_DOMAIN_ID=0
+      - RMW_IMPLEMENTATION=rmw_cyclonedx_cpp
+      - DISPLAY=${DISPLAY}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ../data:/home/ros/fruit_detector_ws/src/aoc_fruit_detector/data:ro
+    network_mode: host
+    command: >
+      bash -c "
+        source /opt/ros/humble/setup.bash &&
+        cd /home/ros/fruit_detector_ws &&
+        colcon build &&
+        source install/setup.bash &&
+        ros2 launch aoc_fruit_detector fruit_detection.launch.py
+      "
+    healthcheck:
+      test: ["CMD", "ros2", "topic", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nuclio Function (for local testing)
+  nuclio-function:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aoc-nuclio-function
+    environment:
+      - ROS_DOMAIN_ID=0
+      - RMW_IMPLEMENTATION=rmw_cyclonedx_cpp
+    ports:
+      - "8080:8080"
+    network_mode: host
+    depends_on:
+      fruit-detector:
+        condition: service_healthy
+    command: >
+      bash -c "
+        source /opt/ros/humble/setup.bash &&
+        source /opt/ros_ws/install/setup.bash &&
+        python3 main.py
+      "
+
+networks:
+  default:
+    driver: bridge
