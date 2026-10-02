@@ -31,6 +31,8 @@ from geometry_msgs.msg import TransformStamped
 
 from scipy.spatial.transform import Rotation as R
 
+from rclpy.qos import qos_profile_sensor_data
+
 class FruitDetectionNode(Node):
     def __init__(self, non_ros_config_path):
         super().__init__('aoc_fruit_detector')
@@ -112,30 +114,25 @@ class FruitDetectionNode(Node):
             self.set_default_camera_model() # in case camera_info calibration message not available 
             
             # Declare subscribers
-            qos_profile = QoSProfile(
-                reliability=ReliabilityPolicy.BEST_EFFORT,
-                depth=1
-            )
-
             self.image_sub = self.create_subscription(
                 Image,
                 'camera/image_raw',
                 self.image_callback,
-                qos_profile
+                qos_profile=qos_profile_sensor_data
             )
 
             self.depth_sub = self.create_subscription(
                 Image,
                 'camera/depth',
                 self.depth_callback,
-                qos_profile
+                qos_profile=qos_profile_sensor_data
             )
 
             self.camera_info_sub = self.create_subscription(
                 CameraInfo,
                 'camera/camera_info',
                 self.camera_info_callback,
-                qos_profile
+                qos_profile=qos_profile_sensor_data
             )
 
             # Create and declare publishers
