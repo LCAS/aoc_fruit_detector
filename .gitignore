@@ -63,8 +63,12 @@ scripts/**/strawberry_dataset/
 scripts/**/output/
 scripts/**/bag/
 
-scripts/data/strawberry/**
-scripts/data/tomato/**
+# Andy added for ROSCon
+scripts/data/documentation/*
+!scripts/data/documentation/.gitkeep
+!scripts/data/documentation/*.md
+scripts/data/strawberry/*
+scripts/data/tomato/*
 *.zip
 *.pkl
 
