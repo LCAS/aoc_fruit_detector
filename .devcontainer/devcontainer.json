@@ -47,6 +47,8 @@
 	},
 	
 	// Mount additional volumes
+	// Note: that /media on host may be /run/media 
+	// Note: that /etc/timezone may not exist on host
 	"mounts": [
 		//"source=/etc/timezone,target=/etc/timezone,type=bind,readonly",
 		"source=/etc/localtime,target=/etc/localtime,type=bind,readonly",
