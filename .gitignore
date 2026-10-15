@@ -63,3 +63,8 @@ scripts/**/strawberry_dataset/
 scripts/**/output/
 scripts/**/bag/
 
+scripts/data/strawberry/**
+scripts/data/tomato/**
+*.zip
+*.pkl
+
