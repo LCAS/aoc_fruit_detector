@@ -8,10 +8,11 @@ It documents the scripts inside src/scripts folder with the documentation files 
 
 ## Scripts
 
-- detector.py
-- fruit_detection.py
-- dectectron_predictor/detectron_predictor.py
-- detectron_trainer/aoc_trainer.py
-- detectron_trainer/detectron_trainer.py
-- learner_predictor/learner_predictor.py
-- learner_trainer/learner_trainer.py
+- **detector.py**
+- **fruit_detection.py**
+- dectectron_predictor/**detectron_predictor.py**
+- detectron_trainer/**aoc_trainer.py**
+- detectron_trainer/**detectron_trainer.py**
+- learner_predictor/**learner_predictor.py**
+- learner_trainer/**learner_trainer.py**
+- utils/**utils.py**
