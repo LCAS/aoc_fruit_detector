@@ -13,3 +13,5 @@ It documents the scripts inside src/scripts folder with the documentation files 
 - dectectron_predictor/detectron_predictor.py
 - detectron_trainer/aoc_trainer.py
 - detectron_trainer/detectron_trainer.py
+- learner_predictor/learner_predictor.py
+- learner_trainer/learner_trainer.py
