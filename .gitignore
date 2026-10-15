@@ -61,9 +61,14 @@ scripts/**/images/
 scripts/**/tomato_dataset/
 scripts/**/strawberry_dataset/
 scripts/**/output/
-scripts/**/bag/
+
+# Andy changed from scripts/**/bag for ROSCon
+scripts/**/bag/*
+
 
 # Andy added for ROSCon
+!scripts/data/bag/.gitkeep
+!scripts/data/bag/README.md
 scripts/data/documentation/*
 !scripts/data/documentation/.gitkeep
 !scripts/data/documentation/*.md
