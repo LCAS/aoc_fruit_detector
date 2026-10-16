@@ -33,9 +33,6 @@ from scipy.spatial.transform import Rotation as R
 
 from rclpy.qos import qos_profile_sensor_data
 
-# RGB-D SYNC: pair images by their recorded ROS timestamps, not arrival order.
-from message_filters import Subscriber, ApproximateTimeSynchronizer
-
 class FruitDetectionNode(Node):
     def __init__(self, non_ros_config_path):
         super().__init__('aoc_fruit_detector')
@@ -53,12 +50,7 @@ class FruitDetectionNode(Node):
                 ('verbose', [False, False, False, True, True]),
                 ('pub_verbose', False),
                 ('pub_markers', False),
-                ('use_ros', True),
-                # VISUAL ODOMETRY: reconstruct relative camera motion from RGB-D bag frames.
-                ('enable_rgbd_odometry', True),
-                ('odometry_frame', 'vo_map'),
-                ('odometry_min_inliers', 15),
-                ('odometry_max_reprojection_error', 3.0)
+                ('use_ros', True)
             ]
         )
 
@@ -66,14 +58,14 @@ class FruitDetectionNode(Node):
         if non_ros_config_path:
             with open(non_ros_config_path, 'r') as file:
                 config_data = yaml.safe_load(file)
-
+                
                 for section in ['files', 'directories']:
                     if section in config_data:
                         for key, path in config_data[section].items():
                             if path.startswith('./'):
                                 package_share_directory = get_package_share_directory(self.package_name)
                                 config_data[section][key] = os.path.join(package_share_directory, path.lstrip('./'))
-
+                
                 self.image_dir = config_data['directories']['test_image_dir']
                 self.prediction_json_dir = config_data['directories']['prediction_json_dir']
                 self.prediction_output_dir = config_data['directories']['prediction_output_dir']
@@ -108,21 +100,6 @@ class FruitDetectionNode(Node):
 
             self.pose3d_tf = self.get_parameter('pose3d_tf').value
 
-            # VISUAL ODOMETRY: accumulated transform from camera optical coordinates
-            # to a local, arbitrary-origin world frame (initial camera = origin).
-            self.vo_enabled = bool(self.get_parameter('enable_rgbd_odometry').value)
-            self.vo_frame = str(self.get_parameter('odometry_frame').value)
-            self.vo_min_inliers = int(self.get_parameter('odometry_min_inliers').value)
-            self.vo_max_reprojection_error = float(self.get_parameter('odometry_max_reprojection_error').value)
-            self.vo_T_world_camera = np.eye(4, dtype=np.float64)
-            self.vo_valid = False
-            self.vo_reference = None
-            self.vo_orb = cv2.ORB_create(nfeatures=2000)
-            self.vo_matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
-            self.vo_tf_broadcaster = tf2_ros.TransformBroadcaster(self)
-            if self.vo_enabled and self.pose3d_tf:
-                raise ValueError('RGB-D odometry and pose3d_tf cannot both be enabled')
-
             self.draw_centroid = self.get_parameter('verbose').value[0]
             self.draw_bbox = self.get_parameter('verbose').value[1]
             self.draw_mask = self.get_parameter('verbose').value[2]
@@ -134,20 +111,22 @@ class FruitDetectionNode(Node):
 
             self.bridge = CvBridge()
             self.camera_model = image_geometry.PinholeCameraModel()
-            self.set_default_camera_model() # in case camera_info calibration message not available
+            self.set_default_camera_model() # in case camera_info calibration message not available 
+            
+            # Declare subscribers
+            self.image_sub = self.create_subscription(
+                Image,
+                'camera/image_raw',
+                self.image_callback,
+                qos_profile=qos_profile_sensor_data
+            )
 
-            # RGB-D SYNC: both bag topics use sensor-data QoS. Process only
-            # timestamp-matched pairs; never reuse a previous depth frame.
-            self.image_sub = Subscriber(
-                self, Image, 'camera/image_raw', qos_profile=qos_profile_sensor_data
+            self.depth_sub = self.create_subscription(
+                Image,
+                'camera/depth',
+                self.depth_callback,
+                qos_profile=qos_profile_sensor_data
             )
-            self.depth_sub = Subscriber(
-                self, Image, 'camera/depth', qos_profile=qos_profile_sensor_data
-            )
-            self.rgbd_sync = ApproximateTimeSynchronizer(
-                [self.image_sub, self.depth_sub], queue_size=30, slop=0.03
-            )
-            self.rgbd_sync.registerCallback(self.image_callback)
 
             self.camera_info_sub = self.create_subscription(
                 CameraInfo,
@@ -160,11 +139,8 @@ class FruitDetectionNode(Node):
             self.publisher_fruit = self.create_publisher(FruitInfoArray, 'fruit_info', 5)
             self.publisher_comp = self.create_publisher(Image, 'image_composed', 5)
             self.publisher_3dmarkers = self.create_publisher(MarkerArray, 'fruit_markers', 5)
-            # PERSISTENT MARKERS: Allocate a fresh marker ID for every valid detection.
-            # Reusing the per-frame detection index would move/overwrite older dots.
-            self.next_fruit_marker_id = 0
         else:
-            self.get_logger().info(f"Non-ROS configuration is active")
+            self.get_logger().info(f"Non-ROS configuration is active") 
             all_files = sorted([f for f in os.listdir(self.image_dir) if os.path.isfile(os.path.join(self.image_dir, f))])
 
             RGB_PATTERN = self.filename_patterns['rgb']
@@ -197,9 +173,9 @@ class FruitDetectionNode(Node):
                     if (self.prediction_json_dir!=""):
                         os.makedirs(self.prediction_json_dir, exist_ok=True)
                         prediction_json_output_file = os.path.join(self.prediction_json_dir, filename)+'.json'
-
+                    
                     self.det_predictor.get_rgb_predictions_image(rgb_image, prediction_json_output_file, self.prediction_output_dir, image_file_name, sample_no, self.fruit_type)
-
+                    
                 sample_no += 1
 
     def compute_pose2d(self, annotation_id, pose_dict):
@@ -227,32 +203,23 @@ class FruitDetectionNode(Node):
             pose2d.y = float('nan')
             pose2d.theta = float('nan')
         return pose2d
-
+    
     def publish_fruit_markers(self, fruits_msg):
         marker_array = MarkerArray()
 
-        # PERSISTENT MARKERS: Do not issue Marker.DELETEALL between frames.
-        # Keep prior valid strawberry locations visible even when detection or
-        # visual odometry temporarily fails to supply new world coordinates.
-        for fruit_msg in fruits_msg.fruits:
-            position = fruit_msg.pose3d.pose.position
-            if not np.all(np.isfinite([position.x, position.y, position.z])):
-                continue
-            # PERSISTENT MARKERS: Distinct IDs prevent subsequent detections from
-            # replacing earlier markers (marker IDs were previously reset to 0).
-            marker = self.create_fruit_marker(fruit_msg, self.next_fruit_marker_id)
-            self.next_fruit_marker_id += 1
+        # Loop over the detected fruits and create a marker for each one
+        for i, fruit_msg in enumerate(fruits_msg.fruits):
+            marker = self.create_fruit_marker(fruit_msg, i)  # Create a marker with unique ID
             marker_array.markers.append(marker)
 
-        if marker_array.markers:
-            self.publisher_3dmarkers.publish(marker_array)
+        # Publish the marker array
+        self.publisher_3dmarkers.publish(marker_array)
 
     def create_fruit_marker(self, fruit_msg, marker_id):
         marker = Marker()
 
-        # VISUAL ODOMETRY: marker and position must use the SAME frame.
-        marker.header.frame_id = fruit_msg.pose3d.header.frame_id
-        marker.header.stamp = fruit_msg.pose3d.header.stamp
+        marker.header.frame_id = self.pose3d_frame
+        marker.header.stamp = self.get_clock().now().to_msg()
 
         marker.ns = "fruits"
         marker.id = marker_id
@@ -279,82 +246,46 @@ class FruitDetectionNode(Node):
         marker.color.b = 1.0
         marker.color.a = 1.0
 
-        # PERSISTENT MARKERS: Zero lifetime means RViz retains the marker
-        # until explicitly deleted or the display is reset.
         marker.lifetime = rclpy.time.Duration(seconds=0).to_msg()
 
         return marker
 
-    # DEPTH FIX: Estimate the fruit's depth from the full COCO segmentation polygon,
-    # rather than trusting a single centroid pixel. None means no reliable depth.
-    def estimate_fruit_depth(self, depth_image, segmentation):
-        height, width = depth_image.shape[:2]
-        polygon = np.asarray(segmentation, dtype=np.float32)
-        if polygon.size < 6 or polygon.size % 2 != 0 or not np.all(np.isfinite(polygon)):
-            return None
-
-        polygon = np.rint(polygon.reshape(-1, 2)).astype(np.int32)
-        polygon[:, 0] = np.clip(polygon[:, 0], 0, width - 1)
-        polygon[:, 1] = np.clip(polygon[:, 1], 0, height - 1)
-        if cv2.contourArea(polygon) <= 0:
-            return None
-
-        mask = np.zeros((height, width), dtype=np.uint8)
-        cv2.fillPoly(mask, [polygon], 1)
-        values = depth_image[mask.astype(bool)]
-        valid = values[np.isfinite(values) & (values >= self.min_depth) & (values <= self.max_depth)]
-        if valid.size == 0:
-            return None
-        return float(np.median(valid))
-
-    def compute_pose3d(self, pose2d, depth_image, segmentation=None):
+    def compute_pose3d(self, pose2d, depth_image):
         pose3d = PoseStamped()
-        # VISUAL ODOMETRY: world positions are only valid when motion tracking succeeds.
-        pose3d.header.frame_id = self.vo_frame if self.vo_enabled else self.pose3d_frame
-        pose3d.header.stamp = self.current_image_stamp if hasattr(self, 'current_image_stamp') else self.get_clock().now().to_msg()
-        pose3d.pose.orientation.w = 1.0
 
-        # DEPTH FIX: Return NaN coordinates if the centroid is invalid instead
-        # of inventing a location at max_depth.
-        if not np.isfinite(pose2d.x) or not np.isfinite(pose2d.y):
-            self.get_logger().warn('Cannot compute 3D position: invalid fruit centroid')
-            pose3d.pose.position.x = float('nan')
-            pose3d.pose.position.y = float('nan')
-            pose3d.pose.position.z = float('nan')
-            return pose3d
-
-        height, width = depth_image.shape[:2]
+        height, width = depth_image.shape
         x = int(pose2d.x)
         y = int(pose2d.y)
-        if not (0 <= x < width and 0 <= y < height):
-            self.get_logger().warn(f'Out of size x:{x}, width:{width}, y:{y} and height:{height}')
-            pose3d.pose.position.x = float('nan')
-            pose3d.pose.position.y = float('nan')
-            pose3d.pose.position.z = float('nan')
-            return pose3d
 
-        # DEPTH FIX: Prefer median valid depth across the segmented strawberry.
-        # If its polygon contains no valid depth, do not substitute 15 m.
-        depth = self.estimate_fruit_depth(depth_image, segmentation or [])
-        if depth is None:
-            self.get_logger().warn(f'No valid depth inside fruit mask at ({x}, {y}); 3D pose unavailable')
-            pose3d.pose.position.x = float('nan')
-            pose3d.pose.position.y = float('nan')
-            pose3d.pose.position.z = float('nan')
-            return pose3d
+        if 0 <= x < width and 0 <= y < height:
+            depth_values_at_pose = depth_image[y, x]
+            non_zero_depth_values = depth_values_at_pose[depth_values_at_pose > 0]
 
-        ray = self.back_project_2d_to_3d_ray(pose2d.x, pose2d.y)
-        p_3d_camera_frame = self.compute_3d_point_from_depth(ray, depth)
-        if self.vo_enabled:
-            if not self.vo_valid:
-                # VISUAL ODOMETRY: never publish guessed world coordinates after tracking loss.
-                p_3d_camera_frame = [float('nan')] * 3
+            if non_zero_depth_values.size > 0:
+                closest_depth_value = np.min(non_zero_depth_values)
             else:
-                homogeneous = np.array([*p_3d_camera_frame[:3], 1.0], dtype=np.float64)
-                p_3d_camera_frame = (self.vo_T_world_camera @ homogeneous)[:3]
-        pose3d.pose.position.x = float(p_3d_camera_frame[0])
-        pose3d.pose.position.y = float(p_3d_camera_frame[1])
-        pose3d.pose.position.z = float(p_3d_camera_frame[2])
+                closest_depth_value = self.max_depth 
+        else:
+            closest_depth_value = self.max_depth
+            self.get_logger().warn(f'Out of size x:{x}, width:{width}, y:{y} and height:{height}')
+        
+        ray = self.back_project_2d_to_3d_ray(pose2d.x, pose2d.y)
+        p_3d_camera_frame = self.compute_3d_point_from_depth(ray, closest_depth_value)
+        #self.get_logger().info(f'3D point at depth {closest_depth_value}: [{p_3d_camera_frame[0]:.2f}, {p_3d_camera_frame[1]:.2f}, {p_3d_camera_frame[2]:.2f}]')
+
+        pose3d.pose.position.x = p_3d_camera_frame[0]
+        pose3d.pose.position.y = p_3d_camera_frame[1]
+        pose3d.pose.position.z = p_3d_camera_frame[2]
+        
+        # Identity quaternion (no rotation)
+        pose3d.pose.orientation.x = 0.0
+        pose3d.pose.orientation.y = 0.0
+        pose3d.pose.orientation.z = 0.0
+        pose3d.pose.orientation.w = 1.0  # No rotation
+
+        pose3d.header.frame_id = self.pose3d_frame
+        pose3d.header.stamp = self.get_clock().now().to_msg()
+    
         return pose3d
 
     def set_default_camera_model(self):
@@ -389,21 +320,29 @@ class FruitDetectionNode(Node):
         self.get_logger().info("Default camera model initialised with intrinsic parameters")
 
     def camera_info_callback(self, msg):
-        # VISUAL ODOMETRY: the supplied RGB-D bag contains no CameraInfo.
-        # The launch remaps CameraInfo to FLIR, which is a different camera.
-        # Do not overwrite the ZED default intrinsics with FLIR calibration.
-        if self.vo_enabled:
-            return
+        
         self.from_camera_info(msg)
-        self.pose3d_frame = msg.header.frame_id
-        self.get_logger().info('Camera model acquired from camera_info message and initialised with intrinsic parameters')
+        #self.camera_model, self.distortion_coeffs = self.from_camera_info(msg)
 
+        self.pose3d_frame = msg.header.frame_id
+
+        self.get_logger().info('Camera model acquired from camera_info message and initialised with intrinsic parameters')
+    
     def from_camera_info(self, msg):
         self.camera_model.fromCameraInfo(msg)
+        #camera_matrix = np.array(msg.k).reshape(3, 3)
+        #distortion_coeffs = np.array(msg.d)
+        #return camera_matrix, distortion_coeffs
 
     def back_project_2d_to_3d_ray(self, u, v):
         ray = self.camera_model.projectPixelTo3dRay((u, v))
         return ray
+        #pixel = np.array([[u, v]], dtype=np.float32)
+        #pixel = np.expand_dims(pixel, axis=0)
+        #undistorted_point = cv2.undistortPoints(pixel, self.camera_model, self.distortion_coeffs)
+        #ray = [undistorted_point[0][0][0], undistorted_point[0][0][1], 1.0]
+        
+        #return ray
 
     def compute_3d_point_from_depth(self, ray, depth):
         # Compute the 3D point in optical frame
@@ -414,9 +353,21 @@ class FruitDetectionNode(Node):
             return point_camera[:3]
         else:
             return point_optical
+        
 
+    def depth_callback(self, msg):
+        try:
+            # Convert ROS2 depth Image message to OpenCV depth image
+            self.cv_depth_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='32FC1')
+            # To replace NaN and Inf with max_depth value
+            self.cv_depth_image[np.isnan(self.cv_depth_image)] = self.max_depth
+            self.cv_depth_image[np.isinf(self.cv_depth_image)] = self.max_depth
+            self.depth_msg = msg 
+        except Exception as e:
+            self.get_logger().error(f"Error processing depth image: {e}")
+    
     def create_confidence_dict(self, confidence_list):
-        # Create a dictionary with annotation_id as the key
+        # Create a dictionary with annotation_id as the key and confidence as the value
         return {entry['annotation_id']: entry['confidence'] for entry in confidence_list}
 
     def create_pose_dict(self, pose_list):
@@ -446,153 +397,81 @@ class FruitDetectionNode(Node):
         rot_matrix = R.from_quat(q).as_matrix()
         tf_matrix = np.eye(4)
         tf_matrix[:3, :3] = rot_matrix
+        #print(f"rot_matrix: {rot_matrix}")
         tf_matrix[:3, 3] = tr
+        #print(f"tf_matrix: {tf_matrix}")
         return tf_matrix
 
-    # VISUAL ODOMETRY: estimate current camera pose using background RGB features
-    # paired with depth from the previous *successfully tracked* frame.
-    # solvePnPRansac estimates previous-camera -> current-camera; invert it
-    # before accumulating the world -> camera coordinate conversion.
-    def update_rgbd_odometry(self, image, depth, stamp):
-        if not self.vo_enabled:
-            return
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        keypoints, descriptors = self.vo_orb.detectAndCompute(gray, None)
-        if descriptors is None or len(keypoints) < 20:
-            self.vo_valid = False
-            self.get_logger().warn('VO: too few image features; no world positions this frame')
-            return
-
-        K = np.asarray(self.camera_model.intrinsicMatrix(), dtype=np.float64)
-        if K.shape != (3, 3) or not np.isfinite(K).all() or K[0, 0] <= 0 or K[1, 1] <= 0:
-            self.vo_valid = False
-            self.get_logger().warn('VO: invalid camera intrinsics')
-            return
-
-        current = (keypoints, descriptors, depth.copy())
-        if self.vo_reference is None:
-            self.vo_reference = current
-            self.vo_valid = True  # Initial frame establishes the local origin.
-            self.publish_vo_transform(stamp)
-            self.get_logger().info('VO: initial camera frame established as local origin')
-            return
-
-        prev_keypoints, prev_descriptors, prev_depth = self.vo_reference
-        pairs = self.vo_matcher.knnMatch(prev_descriptors, descriptors, k=2)
-        good = [m for pair in pairs if len(pair) == 2 for m, n in [pair] if m.distance < 0.70 * n.distance]
-        xyz_prev, uv_curr = [], []
-        h, w = prev_depth.shape[:2]
-        fx, fy, cx, cy = K[0, 0], K[1, 1], K[0, 2], K[1, 2]
-        for m in good:
-            u, v = prev_keypoints[m.queryIdx].pt
-            x, y = int(round(u)), int(round(v))
-            if not (0 <= x < w and 0 <= y < h):
-                continue
-            z = float(prev_depth[y, x])
-            if not (np.isfinite(z) and self.min_depth <= z <= self.max_depth):
-                continue
-            xyz_prev.append([(u - cx) * z / fx, (v - cy) * z / fy, z])
-            uv_curr.append(keypoints[m.trainIdx].pt)
-
-        if len(xyz_prev) < max(8, self.vo_min_inliers):
-            self.vo_valid = False
-            self.get_logger().warn(f'VO: only {len(xyz_prev)} valid RGB-D correspondences; no world positions')
-            return
-        ok, rvec, tvec, inliers = cv2.solvePnPRansac(
-            np.asarray(xyz_prev, dtype=np.float64),
-            np.asarray(uv_curr, dtype=np.float64),
-            K, None, flags=cv2.SOLVEPNP_EPNP,
-            iterationsCount=150, reprojectionError=self.vo_max_reprojection_error,
-            confidence=0.99)
-        if not ok or inliers is None or len(inliers) < self.vo_min_inliers:
-            self.vo_valid = False
-            self.get_logger().warn('VO: PnP motion estimation failed; no world positions')
-            return
-        # Refine the transform using only RANSAC inliers.
-        idx = inliers.ravel()
-        ok, rvec, tvec = cv2.solvePnP(
-            np.asarray(xyz_prev, np.float64)[idx],
-            np.asarray(uv_curr, np.float64)[idx], K, None,
-            rvec, tvec, useExtrinsicGuess=True, flags=cv2.SOLVEPNP_ITERATIVE)
-        if not ok:
-            self.vo_valid = False
-            return
-        R_curr_prev, _ = cv2.Rodrigues(rvec)
-        T_curr_prev = np.eye(4, dtype=np.float64)
-        T_curr_prev[:3, :3] = R_curr_prev
-        T_curr_prev[:3, 3] = tvec.reshape(3)
-        self.vo_T_world_camera = self.vo_T_world_camera @ np.linalg.inv(T_curr_prev)
-        self.vo_reference = current
-        self.vo_valid = True
-        self.publish_vo_transform(stamp)
-        self.get_logger().info(f'VO: tracking, {len(idx)} inliers; camera at {self.vo_T_world_camera[:3, 3].round(3).tolist()} m')
-
-    def publish_vo_transform(self, stamp):
-        # VISUAL ODOMETRY: RViz Fixed Frame can be set to 'vo_map'.
-        # This is a local drifting frame, NOT surveyed robot/world position.
-        transform = TransformStamped()
-        transform.header.stamp = stamp
-        transform.header.frame_id = self.vo_frame
-        transform.child_frame_id = self.pose3d_frame
-        transform.transform.translation.x, transform.transform.translation.y, transform.transform.translation.z = (
-            float(v) for v in self.vo_T_world_camera[:3, 3])
-        q = R.from_matrix(self.vo_T_world_camera[:3, :3]).as_quat()
-        transform.transform.rotation.x = float(q[0])
-        transform.transform.rotation.y = float(q[1])
-        transform.transform.rotation.z = float(q[2])
-        transform.transform.rotation.w = float(q[3])
-        if transform.child_frame_id:
-            self.vo_tf_broadcaster.sendTransform(transform)
-
-    def image_callback(self, msg, depth_msg):
+    def image_callback(self, msg):
         try:
             self.get_logger().info("Image captured.")
-            # VISUAL ODOMETRY: bypass the unrelated camera-link TF lookup.
-            self.tf_matrix = np.eye(4) if self.vo_enabled else self.get_optic_tf()
+
+            self.tf_matrix = self.get_optic_tf()
+
             # Convert ROS Image message to OpenCV image
             self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
             self.get_logger().info("RGB ready.")
+            
+            # Create image_id as an integer using the timestamp
             image_id = int(f'{msg.header.stamp.sec}{str(msg.header.stamp.nanosec).zfill(9)}')
             self.get_logger().info(f"Image ID is: {image_id}")
 
-            rgb_msg = msg
-            self.current_image_stamp = msg.header.stamp
-            # VISUAL ODOMETRY: camera optical frame is taken from image headers.
-            # The bag has no CameraInfo messages, so do not rely on a live FLIR frame.
-            if self.vo_enabled:
-                self.pose3d_frame = msg.header.frame_id
-            # RGB-D SYNC: depth_msg is paired with this RGB frame by its
-            # header timestamp. Conversion preserves NaN/Inf for filtering.
-            depth_image = self.bridge.imgmsg_to_cv2(depth_msg, desired_encoding='32FC1')
-            if self.cv_image.shape[:2] != depth_image.shape[:2]:
-                self.get_logger().warn("Resizing paired depth image to RGB dimensions.")
-                depth_image = cv2.resize(
-                    depth_image, (self.cv_image.shape[1], self.cv_image.shape[0]),
-                    interpolation=cv2.INTER_NEAREST
-                )
+            rgb_msg = msg                 
+            if hasattr(self, 'depth_msg') and self.depth_msg is not None:
+                depth_msg = self.depth_msg
+            else:
+                depth_msg = Image()
 
-            # RGB-D SYNC: the synchronizer enforces a 30 ms pairing window.
-            # Feed this exact matched pair into visual odometry.
-            if self.vo_enabled:
-                self.update_rgbd_odometry(self.cv_image, depth_image, msg.header.stamp)
+            if hasattr(self, 'cv_depth_image') and self.cv_depth_image is not None:
+                # Ensure that the depth image is the same size as the RGB image
+                if self.cv_image.shape[:2] != self.cv_depth_image.shape[:2]:
+                    self.get_logger().warn("Resizing depth image to match RGB image dimensions.")
+                    depth_image = cv2.resize(self.cv_depth_image, (self.cv_image.shape[1], self.cv_image.shape[0]))
+                else:
+                    depth_image = self.cv_depth_image
+            else:
+                # If no depth image is available, use the constant depth value
+                self.get_logger().warn(f"No depth image available. Using constant depth value: {self.constant_depth_value}")
+                depth_image = np.full(self.cv_image.shape[:2], self.constant_depth_value, dtype=np.float32)
+
             self.get_logger().info("Depth ready")
             # Combine RGB and depth into a single 4-channel image (3 for RGB + 1 for depth)
             rgbd_image = np.dstack((self.cv_image, depth_image))
             self.get_logger().info("RGBD ready")
-
+            
             json_annotation_message, _, rgb_masks, depth_mask = self.det_predictor.get_predictions_message(rgbd_image, image_id, self.fruit_type)
 
+            #info = json_annotation_message.get('info', [])
+            #licenses = json_annotation_message.get('licenses', [])
+            #self.get_logger().info(f"Info: {info}")
+            #self.get_logger().info(f"License: {licenses}")
+            #image_info = json_annotation_message.get('images', [])
+            #self.get_logger().info(f"images: {image_info}")
             annotations = json_annotation_message.get('annotations', [])
             confidence_list = json_annotation_message.get('confidence', [])
             pose_list = json_annotation_message.get('orientation', [])
             categories = json_annotation_message.get('categories', [])
 
+            '''if isinstance(annotations, list) and len(annotations) > 0:
+                self.get_logger().info("Keys of annotations:")
+                for idx, annotation in enumerate(annotations):
+                    if isinstance(annotation, dict):  # Ensure that the annotation is a dictionary
+                        keys = annotation.keys()  # Get keys of the current annotation
+                        self.get_logger().info(f"Annotation {idx} keys: {list(keys)}")  # Convert keys to a list for logging
+                    else:
+                        self.get_logger().warn(f"Annotation {idx} is not a dictionary: {annotation}")
+            else:
+                self.get_logger().info("No annotations found.")'''
+
             fruits_msg = FruitInfoArray()
             fruits_msg.fruits = []
+            
             confidence_dict = self.create_confidence_dict(confidence_list)
+
             pose_dict = self.create_pose_dict(pose_list)
 
             for annotation in annotations:
+                #self.get_logger().info(f'Annotation: {annotation}')
                 fruit_id = annotation.get('id', None)
                 image_id = annotation.get('image_id', None)
                 category_id = annotation.get('category_id', -1)
@@ -641,20 +520,23 @@ class FruitDetectionNode(Node):
                     fruit_msg._ripeness_level = 0.15
                 fruit_msg.area = area
                 fruit_msg.volume = area*2 # AY: To be developed
-                fruit_msg.bbox = bbox
+                fruit_msg.bbox = bbox 
                 fruit_msg.bvol = bbox # AY: To be developed
                 fruit_msg.mask2d = segmentation
                 fruit_msg.pose2d = self.compute_pose2d(fruit_id, pose_dict)
                 fruit_msg.mask3d = segmentation # AY: To be developed
-                # DEPTH FIX: Pass the segmentation polygon so the 3D pose uses
-                # a robust median depth across the fruit instead of one pixel.
-                fruit_msg.pose3d = self.compute_pose3d(fruit_msg.pose2d, depth_image, segmentation)
+                fruit_msg.pose3d = self.compute_pose3d(fruit_msg.pose2d, depth_image)
                 fruit_msg.confidence = float(confidence_dict.get(fruit_id, '-1.0'))
                 fruit_msg.occlusion_level = 0.88
+                # Log and publish the message
+                #self.get_logger().info(f'Publishing: image_id={fruit_msg.image_id}, fruit_id={fruit_msg.fruit_id}, type={fruit_msg.fruit_type}, variety={fruit_msg.fruit_variety}, ripeness={fruit_msg.ripeness_category}')
+                #self.get_logger().info(f'Publishing pose of fruit: {fruit_msg.pose2d}')
+                #self.get_logger().info(f'Publishing pose of fruit: {fruit_msg.pose3d}')
+                #self.get_logger().info(f'Depth values: {depth_mask}')
                 fruits_msg.fruits.append(fruit_msg)
             if self.pub_verbose:
-                fruits_msg.rgb_image = rgb_msg
-                fruits_msg.depth_image = depth_msg
+                fruits_msg.rgb_image = rgb_msg        # Assign the current RGB image
+                fruits_msg.depth_image = depth_msg    # Assign the stored depth image
                 fruits_msg.rgb_image_composed = self.add_markers_on_image(self.cv_image, fruits_msg)
                 self.publisher_comp.publish(fruits_msg.rgb_image_composed)
             if self.pub_markers:
@@ -667,44 +549,65 @@ class FruitDetectionNode(Node):
             self.get_logger().error(f'Error processing image: {e}')
 
     def add_markers_on_image(self, cv_image, fruits_info):
-        height, width, _ = cv_image.shape
-        scale_factor = min(width, height) / 1500
+        height, width, _ = cv_image.shape  # Get image dimensions
+        scale_factor = min(width, height) / 1500  # Scale the circle size based on image dimensions
+        
         for fruit in fruits_info.fruits:
             x = int(fruit.pose2d.x)
             y = int(fruit.pose2d.y)
             theta = np.deg2rad(fruit.pose2d.theta)
+            
+            # Set color based on ripeness
             if fruit.ripeness_level < 0.5:
-                color = (0, 255, 0)
+                color = (0, 255, 0)  # Green for unripe
             else:
-                color = (0, 0, 255)
+                color = (0, 0, 255)  # Red for ripe
+            
             if self.draw_centroid:
+                # Point the centroid (origin of the fruit)
                 radius = int(10 * scale_factor)
                 cv2.circle(cv_image, (x, y), radius, color, -1)
+            
             if self.draw_mask:
-                mask_points = np.array(fruit.mask2d, dtype=np.int32).reshape((-1, 2))
+                # Draw the polygon mask outline
+                mask_points = np.array(fruit.mask2d, dtype=np.int32).reshape((-1, 2))  # Convert 1D mask to Nx2 format
                 cv2.polylines(cv_image, [mask_points], isClosed=True, color=color, thickness=2)
+            
             if self.draw_bbox:
                 x_min, y_min, width, height = map(int, fruit.bbox)
+        
                 x_max = x_min + width
                 y_max = y_min + height
                 cv2.rectangle(cv_image, (x_min, y_min), (x_max, y_max), color, thickness=2)
+
             if self.draw_cf:
-                color_x = (0, 0, 255)
-                color_y = (0, 255, 0)
+                # Draw fruit coordinate frame (cf)
+                color_x = (0, 0, 255) # Red for x axis
+                color_y = (0, 255, 0)  # Green for y axis
                 arrow_length = int(30 * scale_factor)
-                end_x_x = int(x + arrow_length * np.cos(theta))
-                end_y_x = int(y + arrow_length * np.sin(theta))
+                end_x_x = int(x + arrow_length * np.cos(theta))  # Calculate endpoint x
+                end_y_x = int(y + arrow_length * np.sin(theta))  # Calculate endpoint y
                 cv2.arrowedLine(cv_image, (x, y), (end_x_x, end_y_x), color_x, thickness=2, tipLength=0.3)
-                end_x_y = int(x + arrow_length * np.cos(theta+np.pi/2))
-                end_y_y = int(y + arrow_length * np.sin(theta+np.pi/2))
+                end_x_y = int(x + arrow_length * np.cos(theta+np.pi/2))  # Calculate endpoint x
+                end_y_y = int(y + arrow_length * np.sin(theta+np.pi/2))  # Calculate endpoint y
                 cv2.arrowedLine(cv_image, (x, y), (end_x_y, end_y_y), color_y, thickness=2, tipLength=0.3)
+
             if self.add_text:
-                text_position = (end_x_x + 5, end_y_x - 5)
-                font_scale = 1.5 * scale_factor
-                font_thickness = max(1, int(2 * scale_factor))
-                cv2.putText(cv_image, f"{fruit.pose2d.theta:.1f}", text_position,
-                            cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 0, 0),
-                            thickness=font_thickness, lineType=cv2.LINE_AA)
+                text_position = (end_x_x + 5, end_y_x - 5)  # Offset text slightly from the arrow tip
+                font_scale = 1.5 * scale_factor  # Adjust text size based on image size
+                font_thickness = max(1, int(2 * scale_factor))  # Scale text thickness
+                cv2.putText(
+                    cv_image, 
+                    f"{fruit.pose2d.theta:.1f}",  # Format theta to 1 decimal place
+                    text_position, 
+                    cv2.FONT_HERSHEY_SIMPLEX, 
+                    font_scale, 
+                    (255, 0, 0),  # blue text
+                    thickness=font_thickness, 
+                    lineType=cv2.LINE_AA
+                )
+
+        # Convert the modified image back to a ROS image message
         composed_image = self.bridge.cv2_to_imgmsg(cv_image, encoding='bgr8')
         return composed_image
 
