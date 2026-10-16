@@ -206,6 +206,10 @@ class FruitDetectionNode(Node):
     
     def publish_fruit_markers(self, fruits_msg):
         marker_array = MarkerArray()
+        # Remove markers from detections that no longer have usable depth.
+        clear_marker = Marker()
+        clear_marker.action = Marker.DELETEALL
+        marker_array.markers.append(clear_marker)
 
         # Loop over the detected fruits and create a marker for each one
         for i, fruit_msg in enumerate(fruits_msg.fruits):
@@ -218,8 +222,7 @@ class FruitDetectionNode(Node):
     def create_fruit_marker(self, fruit_msg, marker_id):
         marker = Marker()
 
-        marker.header.frame_id = self.pose3d_frame
-        marker.header.stamp = self.get_clock().now().to_msg()
+        marker.header = fruit_msg.pose3d.header
 
         marker.ns = "fruits"
         marker.id = marker_id
@@ -240,10 +243,11 @@ class FruitDetectionNode(Node):
         marker.scale.y = 0.02
         marker.scale.z = 0.02
 
-        # Set the color (RGBA)
-        marker.color.r = 0.0
-        marker.color.g = 0.0
-        marker.color.b = 1.0
+        # Match the image overlay: green for unripe, red for ripe.
+        is_ripe = fruit_msg.ripeness_level >= 0.5
+        marker.color.r = 1.0 if is_ripe else 0.0
+        marker.color.g = 0.0 if is_ripe else 1.0
+        marker.color.b = 0.0
         marker.color.a = 1.0
 
         marker.lifetime = rclpy.time.Duration(seconds=0).to_msg()
@@ -257,17 +261,19 @@ class FruitDetectionNode(Node):
         x = int(pose2d.x)
         y = int(pose2d.y)
 
-        if 0 <= x < width and 0 <= y < height:
-            depth_values_at_pose = depth_image[y, x]
-            non_zero_depth_values = depth_values_at_pose[depth_values_at_pose > 0]
+        if not (0 <= x < width and 0 <= y < height):
+            return None
 
-            if non_zero_depth_values.size > 0:
-                closest_depth_value = np.min(non_zero_depth_values)
-            else:
-                closest_depth_value = self.max_depth 
-        else:
-            closest_depth_value = self.max_depth
-            self.get_logger().warn(f'Out of size x:{x}, width:{width}, y:{y} and height:{height}')
+        # A local median rejects isolated bad pixels without sampling distant
+        # parts of the image. Depth is in metres at this point.
+        radius = 2
+        patch = depth_image[max(0, y-radius):min(height, y+radius+1),
+                            max(0, x-radius):min(width, x+radius+1)]
+        valid = patch[np.isfinite(patch) & (patch > 0)
+                      & (patch >= self.min_depth) & (patch < self.max_depth)]
+        if valid.size < 3:
+            return None
+        closest_depth_value = float(np.median(valid))
         
         ray = self.back_project_2d_to_3d_ray(pose2d.x, pose2d.y)
         p_3d_camera_frame = self.compute_3d_point_from_depth(ray, closest_depth_value)
@@ -324,7 +330,8 @@ class FruitDetectionNode(Node):
         self.from_camera_info(msg)
         #self.camera_model, self.distortion_coeffs = self.from_camera_info(msg)
 
-        self.pose3d_frame = msg.header.frame_id
+        # The configured output frame must match the coordinates we compute.
+        # CameraInfo supplies calibration, not an automatic output-frame change.
 
         self.get_logger().info('Camera model acquired from camera_info message and initialised with intrinsic parameters')
     
@@ -346,7 +353,9 @@ class FruitDetectionNode(Node):
 
     def compute_3d_point_from_depth(self, ray, depth):
         # Compute the 3D point in optical frame
-        point_optical = np.array([ray[0] * depth, ray[1] * depth, ray[2] * depth, 1.0])
+        # Registered depth measures optical Z, not distance along a unit ray.
+        ray = np.asarray(ray, dtype=np.float64)
+        point_optical = np.append(ray * (depth / ray[2]), 1.0)
         if self.pose3d_tf:
             # Apply the transformation to convert to camera frame
             point_camera = np.dot(self.tf_matrix, point_optical)
@@ -358,10 +367,14 @@ class FruitDetectionNode(Node):
     def depth_callback(self, msg):
         try:
             # Convert ROS2 depth Image message to OpenCV depth image
-            self.cv_depth_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='32FC1')
-            # To replace NaN and Inf with max_depth value
-            self.cv_depth_image[np.isnan(self.cv_depth_image)] = self.max_depth
-            self.cv_depth_image[np.isinf(self.cv_depth_image)] = self.max_depth
+            if msg.encoding not in ('16UC1', '32FC1'):
+                raise ValueError(f'Unsupported depth encoding: {msg.encoding}')
+            depth = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
+            depth = np.asarray(depth, dtype=np.float32).copy()
+            if msg.encoding == '16UC1':
+                depth *= 0.001  # Unsigned 16-bit depth is in millimetres.
+            depth[~np.isfinite(depth) | (depth <= 0)] = np.nan
+            self.cv_depth_image = depth
             self.depth_msg = msg 
         except Exception as e:
             self.get_logger().error(f"Error processing depth image: {e}")
@@ -426,7 +439,7 @@ class FruitDetectionNode(Node):
                 # Ensure that the depth image is the same size as the RGB image
                 if self.cv_image.shape[:2] != self.cv_depth_image.shape[:2]:
                     self.get_logger().warn("Resizing depth image to match RGB image dimensions.")
-                    depth_image = cv2.resize(self.cv_depth_image, (self.cv_image.shape[1], self.cv_image.shape[0]))
+                    depth_image = cv2.resize(self.cv_depth_image, (self.cv_image.shape[1], self.cv_image.shape[0]), interpolation=cv2.INTER_NEAREST)
                 else:
                     depth_image = self.cv_depth_image
             else:
@@ -525,7 +538,12 @@ class FruitDetectionNode(Node):
                 fruit_msg.mask2d = segmentation
                 fruit_msg.pose2d = self.compute_pose2d(fruit_id, pose_dict)
                 fruit_msg.mask3d = segmentation # AY: To be developed
-                fruit_msg.pose3d = self.compute_pose3d(fruit_msg.pose2d, depth_image)
+                pose3d = self.compute_pose3d(fruit_msg.pose2d, depth_image)
+                if pose3d is None:
+                    self.get_logger().warn(f'Skipping fruit {fruit_id}: no reliable depth near its centre')
+                    continue
+                fruit_msg.pose3d = pose3d
+                fruit_msg.pose3d.header.stamp = rgb_msg.header.stamp
                 fruit_msg.confidence = float(confidence_dict.get(fruit_id, '-1.0'))
                 fruit_msg.occlusion_level = 0.88
                 # Log and publish the message
@@ -538,6 +556,7 @@ class FruitDetectionNode(Node):
                 fruits_msg.rgb_image = rgb_msg        # Assign the current RGB image
                 fruits_msg.depth_image = depth_msg    # Assign the stored depth image
                 fruits_msg.rgb_image_composed = self.add_markers_on_image(self.cv_image, fruits_msg)
+                fruits_msg.rgb_image_composed.header = rgb_msg.header
                 self.publisher_comp.publish(fruits_msg.rgb_image_composed)
             if self.pub_markers:
                 self.publish_fruit_markers(fruits_msg)

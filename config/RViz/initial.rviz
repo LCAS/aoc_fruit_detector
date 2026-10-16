@@ -1,6 +1,6 @@
 Panels:
   - Class: rviz_common/Displays
-    Help Height: 78
+    Help Height: 0
     Name: Displays
     Property Tree Widget:
       Expanded:
@@ -10,7 +10,7 @@ Panels:
         - /TF1
         - /TF1/Frames1
       Splitter Ratio: 0.5
-    Tree Height: 101
+    Tree Height: 179
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
@@ -33,22 +33,22 @@ Visualization Manager:
   Class: ""
   Displays:
     - Alpha: 0.5
-      Cell Size: 1
+      Cell Size: 0.10000000149011612
       Class: rviz_default_plugins/Grid
       Color: 160; 160; 164
       Enabled: true
       Line Style:
-        Line Width: 0.029999999329447746
+        Line Width: 0.0020000000949949026
         Value: Lines
-      Name: Grid
+      Name: Ground reference (0.5 m below camera)
       Normal Cell Count: 0
       Offset:
         X: 0
-        Y: 0
-        Z: 0
-      Plane: XY
-      Plane Cell Count: 10
-      Reference Frame: <Fixed Frame>
+        Y: 0.5
+        Z: 1
+      Plane: XZ
+      Plane Cell Count: 20
+      Reference Frame: zed_left_camera_optical_frame
       Value: true
     - Class: rviz_default_plugins/Image
       Enabled: true
@@ -99,21 +99,24 @@ Visualization Manager:
           Value: false
         panda_link0:
           Value: false
+        zed_left_camera_optical_frame:
+          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
-      Show Axes: true
+      Show Axes: false
       Show Names: false
       Tree:
         panda_link0:
           flir_camera:
-            {}
+            zed_left_camera_optical_frame:
+              {}
       Update Interval: 0
       Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: panda_link0
+    Fixed Frame: flir_camera
     Frame Rate: 30
   Name: root
   Tools:
@@ -156,25 +159,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 8.402497291564941
+      Distance: 0.5
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
-      Focal Point:
-        X: -1.0671789646148682
-        Y: -0.8573377728462219
-        Z: -0.2311486005783081
-      Focal Shape Fixed Size: true
-      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.10479725897312164
+      Pitch: 0
+      Focal Point:
+        X: 0.5
+        Y: 0
+        Z: 0
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.02
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.1854007244110107
+      Yaw: 3.141592653589793
     Saved: ~
 Window Geometry:
   Displays:
