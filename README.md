@@ -51,7 +51,7 @@ python3 -m pip install -e detectron2
 Run following to publish/save annotations detected by `aoc_fruit_detector` package.
 
 ```bash
-ros2 launch aoc_fruit_detector fruit_detection.launch.py
+ros2 launch aoc_fruit_detector fruit_detection_with_bag.launch.py
 ```
 
 ## Parameters
