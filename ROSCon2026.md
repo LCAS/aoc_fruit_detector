@@ -8,7 +8,7 @@ A hands-on session showcasing selected Agri-OpenCore components. Participants wi
 
 ### Prerequisites 
 
-Exploring the AOC Fruit detector repository requires [docker](https://docs.docker.com/get-docker/), the [VS Code IDE](https://code.visualstudio.com/Download), and [Git](https://git-scm.com/install/) to be installed on your host laptop or PC. In the workshop, we will use a Linux laptop.
+Exploring the AOC Fruit detector repository requires [docker](https://docs.docker.com/get-docker/), the [VS Code IDE](https://code.visualstudio.com/Download), the dev container [extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers), and [Git](https://git-scm.com/install/) to be installed on your host laptop or PC. In the workshop, we will use a Linux laptop.
 
 **A GPU is advised but not essential.** It is only really needed for training the models but we will not be doing this live in the workshop as training can take hours.
 
@@ -65,3 +65,7 @@ ros2 launch aoc_fruit_detector fruit_detection_with_bag.launch.py
 ## What you should see
 
 At this point it will be working if you can see:
+
+<video width="640" controls>
+  <source src="ROSCon/video.mp4" type="video/mp4">
+</video>
