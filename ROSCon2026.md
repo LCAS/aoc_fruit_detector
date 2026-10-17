@@ -36,12 +36,3 @@ Run following to publish/save annotations detected by `aoc_fruit_detector` packa
 ```bash
 ros2 launch aoc_fruit_detector fruit_detection_with_bag.launch.py
 ```
-
-
-## Wiki
-
-To get more information about the AOC Fruit Detector, please refer to [Wiki page][wiki_page]
-
----
-
-[wiki_page]: https://github.com/LCAS/aoc_fruit_detector/wiki
