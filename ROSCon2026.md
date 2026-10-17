@@ -66,6 +66,4 @@ ros2 launch aoc_fruit_detector fruit_detection_with_bag.launch.py
 
 At this point it will be working if you can see:
 
-<video width="640" controls>
-  <source src="ROSCon/video.mp4" type="video/mp4">
-</video>
+https://github.com/LCAS/aoc_fruit_detector/blob/ROSCon/ROSCon/video.mp4
