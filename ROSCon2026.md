@@ -10,9 +10,12 @@ A hands-on session showcasing selected Agri-OpenCore components. Participants wi
 
 Exploring the AOC Fruit detector repository requires [docker](https://docs.docker.com/get-docker/), the [VS Code IDE](https://code.visualstudio.com/Download), and [Git](https://git-scm.com/install/) to be installed on your host laptop or PC. In the workshop, we will use a Linux laptop.
 
-Once they are installed:
+**A GPU is advised but not essential.** It is only really needed for training the models but we will not be doing this live in the workshop as training can take hours.
 
-1. **Clone the repository:** - We will use the ROSCon branch. Perhaps make a new folder 
+Once the prerequisites are installed / satisifed:
+
+1. **Clone the repository:** - We will use the `ROSCon` branch. Perhaps make a new folder:
+
     ```bash
     mkdir ROSCon
     cd ROSCon
@@ -24,6 +27,10 @@ This creates an `aoc_fruit_detector` folder on the host. Open that folder in VS 
 2. **Build and open the development container:**
 
     The Dev Containers extension may prompt you to **Reopen in Container** when it detects `.devcontainer/devcontainer.json`. If it does not, use the Command Palette (`Ctrl+Shift+P`) and run **Dev Containers: Reopen in Container**. VS Code then builds and starts the container. The repository is mounted inside it at `/home/ros/fruit_detector_ws/src`; the ROS workspace and build environment are inside the container.
+
+    <span style="color: red;">**NOTE: This building process will take some time the first time you do this!**</span> There is a lot to download. Depending upon your internet connection, from a few minutes minutes to a lot more - coffee time.
+
+    <span style="color: red;">Any errors I suggest asking chatGPT / other LLM. It is most likely your docker installation.</span>
 
 3. **Access the desktop interface (optional):**
 
