@@ -35,6 +35,7 @@ Run the following to publish/save annotations detected by `aoc_fruit_detector` p
 
 ```bash
 cd ~/fruit_detector_ws/src
+colcon build
 source install/setup.bash
 ros2 launch aoc_fruit_detector fruit_detection_with_bag.launch.py
 ```
