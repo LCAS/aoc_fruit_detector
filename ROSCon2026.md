@@ -1,0 +1,47 @@
+# ROSCon 2026
+
+## ROS in the Field: Building Open Agri-Food Robotics Together
+
+A hands-on session showcasing selected Agri-OpenCore components. Participants will be able to explore Dockerised examples and learn how reusable components can be incorporated into their own ROS-based systems.
+
+
+
+### Prerequisites 
+
+Exploring the AOC Fruit detector repository requires [docker](https://docs.docker.com/get-docker/), the [VS Code IDE](https://code.visualstudio.com/Download), and [Git](https://git-scm.com/install/) to be installed on your host laptop or PC. In the workshop, we will use a Linux laptop.
+
+Once they are installed:
+
+1. **Clone the repository:** - We will use the ROSCon branch. Perhaps make a new folder 
+    ```
+    mkdir ROSCon
+    cd ROSCon
+    git clone --branch ROSCon --single-branch https://github.com/LCAS/aoc_fruit_detector.git
+    ```
+
+This creates an `aoc_fruit_detector` folder on the host. Open that folder in VS Code.
+
+2. **Build and open the development container:**
+
+    The Dev Containers extension may prompt you to **Reopen in Container** when it detects `.devcontainer/devcontainer.json`. If it does not, use the Command Palette (`Ctrl+Shift+P`) and run **Dev Containers: Reopen in Container**. VS Code then builds and starts the container. The repository is mounted inside it at `/home/ros/fruit_detector_ws/src`; the ROS workspace and build environment are inside the container, not in a host-side `fruit_detector_ws/src` directory.
+
+3. **Access the desktop interface (optional):**
+
+    Open the **Ports** tab in VS Code and follow the forwarded desktop port shown there (the Dev Container configuration forwards port `5801`).
+
+### Running
+
+Run following to publish/save annotations detected by `aoc_fruit_detector` package.
+
+```bash
+ros2 launch aoc_fruit_detector fruit_detection_with_bag.launch.py
+```
+
+
+## Wiki
+
+To get more information about the AOC Fruit Detector, please refer to [Wiki page][wiki_page]
+
+---
+
+[wiki_page]: https://github.com/LCAS/aoc_fruit_detector/wiki
