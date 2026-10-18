@@ -4,7 +4,12 @@
 
 A hands-on session showcasing selected Agri-OpenCore components. Participants will be able to explore Dockerised examples and learn how reusable components can be incorporated into their own ROS-based systems.
 
+### Contact
 Workshop contact email: [Andy Perrett](mailto:APerrett@students.lincoln.ac.uk?subject=ROSCon26) (Make sure Subject line has ROSCon26 in the subject line) 
+
+### Documentation
+
+[Documentation](scripts/documentation/README.md) is available for most scripts. You will also find improvements that need considering.
 
 ### Prerequisites 
 
