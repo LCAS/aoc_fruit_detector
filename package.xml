@@ -30,6 +30,7 @@
   <exec_depend>rmw_cyclonedds_cpp</exec_depend>
   <exec_depend>cyclonedds</exec_depend>
   <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>message_filters</exec_depend>
   <exec_depend>rviz2</exec_depend>
 
   <member_of_group>rosidl_interface_packages</member_of_group>

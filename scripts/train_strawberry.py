@@ -143,7 +143,7 @@ def build_training_hooks(trainer):
     return [
         LossGraphHook(cfg, trainer.model, loader),
         BestCheckpointer(cfg.TEST.EVAL_PERIOD, trainer.checkpointer,
-                         "segm/AP", mode="max", file_prefix="model_best"),
+                         "segm/AP-fruit_ripe", mode="max", file_prefix="model_best"),
     ]
 
 
@@ -202,7 +202,7 @@ def main():
         "training_output_dir": str(output),
     })
     config["training"].update({
-        "number_of_classes": 2, "epochs": 3000, "learning_rate": 0.00025,
+        "number_of_classes": 2, "epochs": 10000, "learning_rate": 0.00025,
         "num_workers": 2, "batch_size": 2, "steps": [2000, 2600],
         "warmup_iters": 100,
     })
@@ -227,7 +227,7 @@ def main():
     print("Detector configuration (non_ros_params.yaml):")
     best_model = output / "model_best.pth"
     if not best_model.is_file():
-        raise RuntimeError("No best model was saved; check validation segm/AP metrics")
+        raise RuntimeError("No best model was saved; check validation segm/AP-fruit_ripe metrics")
     print(f"  model_file: '{best_model}'")
     print(f"  test_metadata_catalog_file: '{output / 'test_metadata_catalog.pkl'}'")
     print(f"  config_file: '{ARCHITECTURE}'")
