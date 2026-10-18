@@ -3,7 +3,7 @@ Started by: Usman Zahidi (uz) {02/08/24}
 """
 # general imports
 import os, pickle, logging,traceback
-
+import torch
 import numpy
 from detectron2.config import get_cfg
 from detectron2.engine.defaults import DefaultPredictor
