@@ -79,4 +79,4 @@ https://github.com/user-attachments/assets/b451f84f-ce7e-4e2a-a872-478c98d1e271
 
 ## Training a model
 
-<img width="800" alt="loss_curve" src="https://github.com/user-attachments/assets/0a0774fb-dd7d-4b91-982d-3a268e79770f" />
+<img width="320" alt="loss_curve" src="https://github.com/user-attachments/assets/0a0774fb-dd7d-4b91-982d-3a268e79770f" />
