@@ -17,6 +17,7 @@ files:
   # Default
   # model_file: './model/aoc_tomato_ripeness_151_40k.pth'
   
+  # As was initially provided pre-ROSCon
   #model_file: './model/aoc_strawberry_class_ripeness.pth' #'./model/aoc_model.pth'
   #config_file: 'COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml'
   #test_metadata_catalog_file: '/home/ros/fruit_detector_ws/src/dataset_catalogs/test_metadata_catalog.pkl'
