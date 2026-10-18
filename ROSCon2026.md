@@ -73,13 +73,44 @@ ros2 launch aoc_fruit_detector fruit_detection_with_bag.launch.py
 
 ## What you should see
 
-At this point it will be working if you can see:
+At this point it will be working if you can see data points in Rviz:
 
 https://github.com/user-attachments/assets/b451f84f-ce7e-4e2a-a872-478c98d1e271
 
 ## Training a model
 
+### Download
+
 Training a model will involve downloading the [aoc_strawberry_dataset](https://lncn.ac/aocfruitds) zip file and extracting into the `scripts/data` folder.
 
+### Config 
+
+The `train_strawberry.py` script needs to be aware of the dataset:
+```
+    dataset = root / "data/strawberry"
+    output = root / "data/training_output/strawberry_ripeness"
+```
+
+### Run
+
+When the training script is run the training graphs can be viewed using `http://localhost:6006`.
+
+The output files including the model weights will be saved in `data/training_output`.
+
+```
+python src/scripts/train_strawberry.py 
+```
 
 <img width="320" alt="loss_curve" src="https://github.com/user-attachments/assets/0a0774fb-dd7d-4b91-982d-3a268e79770f" />
+
+### Detect
+
+The `fruit_detection.py` that is called via the launch file (see above) is configured with the new model details just trained in `src/config/non_ros_params.yaml`:
+
+```JSON
+ model_file: '/home/ros/fruit_detector_ws/src/scripts/data/training_output/strawberry_ripeness/model_best.pth'
+  test_metadata_catalog_file: '/home/ros/fruit_detector_ws/src/scripts/data/training_output/strawberry_ripeness/test_metadata_catalog.pkl'
+  config_file: 'COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml'
+```
+
+Run as above by building, sourcing and then launching.
