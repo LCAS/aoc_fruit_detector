@@ -5,7 +5,7 @@
 A hands-on session showcasing selected Agri-OpenCore components. Participants will be able to explore Dockerised examples and learn how reusable components can be incorporated into their own ROS-based systems.
 
 ### Contact
-Workshop contact email: [Andy Perrett](mailto:APerrett@students.lincoln.ac.uk?subject=ROSCon26) (Make sure Subject line has ROSCon26 in the subject line) 
+Workshop contact email: [Andy Perrett](mailto:APerrett@students.lincoln.ac.uk?subject=ROSCon26) (Make sure Subject line has ROSCon26 in the subject line). Clicking the name should open your mail client. 
 
 ### Documentation
 
@@ -44,6 +44,10 @@ This creates an `aoc_fruit_detector` folder on the host. Open that folder in VS 
     Open the **Ports** tab in VS Code and follow the forwarded desktop port shown there (the Dev Container configuration forwards port `5801`). Or just open a web browser an navigate to:
     ```
     https://localhost:5801
+    ```
+    Training graphs can be found at:
+    ```
+    https://localhost:6006
     ```
 
 ### Running
