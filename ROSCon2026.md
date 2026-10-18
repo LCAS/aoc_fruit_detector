@@ -95,10 +95,10 @@ The `train_strawberry.py` script needs to be aware of the dataset:
 
 When the training script is run the training graphs can be viewed using `http://localhost:6006`.
 
-The output files including the model weights will be saved in `data/training_output`.
+The output files including the model weights will be saved in `scripts/data/training_output`.
 
 ```
-python src/scripts/train_strawberry.py 
+python scripts/train_strawberry.py 
 ```
 
 <img width="320" alt="loss_curve" src="https://github.com/user-attachments/assets/0a0774fb-dd7d-4b91-982d-3a268e79770f" />
