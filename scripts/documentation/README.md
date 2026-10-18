@@ -9,8 +9,8 @@ It documents the scripts inside src/scripts folder with the documentation files 
 ## Scripts
 
 - [**detector.py**](detector.md)
-- [**fruit_detection.py**](fruit_detection.md)
-- [**train_strawberry.py**](train_strawberry.md)
+- [**fruit_detection.py**](fruit_detection.md) *(We will run this in the workshop)*
+- [**train_strawberry.py**](train_strawberry.md) *(We will discuss this in the workshop)*
 - dectectron_predictor/[**detectron_predictor.py**](detectron_predictor.md)
 - detectron_trainer/[**aoc_trainer.py**](aoc_trainer.md)
 - detectron_trainer/[**detectron_trainer.py**](detectron_trainer.md)

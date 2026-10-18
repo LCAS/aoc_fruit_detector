@@ -7,6 +7,7 @@ Updated by: Abdurrahman Yilmaz (ayilmaz@lincoln.ac.uk) {07/04/25}
 # config contains default values, urls to datasets, catalog files
 
 import os,traceback,cv2,logging,yaml
+from pathlib import Path
 import numpy as np
 from detectron_predictor.json_writer.pycococreator.pycococreatortools.fruit_orientation import FruitTypes
 from detectron_trainer.detectron_trainer     import DetectronTrainer
@@ -14,7 +15,6 @@ from detectron_predictor.detectron_predictor import DetectronPredictor
 
 
 from utils.utils import LearnerUtils
-from utils.utils import find_path, find_workspace_root
 
 def call_predictor():
     # instantiation
@@ -83,7 +83,6 @@ def call_predictor():
             logging.error(e)
             print(traceback.format_exc()) if __debug__ else print(e)
         sample_no += 1
-    call_trainer(False,True) # call for evaluation
 
 def call_trainer(resumeType=False,skipTraining=False):
 
@@ -95,30 +94,25 @@ def call_trainer(resumeType=False,skipTraining=False):
         logging.error(e)
         print(traceback.format_exc()) if __debug__ else print(e)
 
-workspace_dir = find_workspace_root('fruit_detector_ws')
-search_root = os.path.join(workspace_dir, 'src', 'aoc_fruit_detector') # 'src' or 'install' based on user desire
-config_dir = find_path('config', search_root=search_root, search_type='dir')
+# Locate configuration relative to this script, independent of the checkout
+# directory name and the shell's current working directory.
+script_dir = Path(__file__).resolve().parent
+search_root = script_dir.parent
+config_path = search_root / 'config' / 'non_ros_params.yaml'
+with config_path.open('r') as file:
+    config_data = yaml.safe_load(file)
 
-
-if not config_dir:
-    raise FileNotFoundError(f"Could not find 'config' directory under {search_root}")
-
-config_name = 'non_ros_params.yaml'
-config_path = find_path('non_ros_params.yaml', search_root=config_dir, search_type='file')
-
-
-if config_path:
-    with open(config_path, 'r') as file:
-        config_data = yaml.safe_load(file)
-else:
-    raise FileNotFoundError(f"No '{config_name}' found in '{config_dir}' or any of its subdirectories")
-
+# Relative asset paths use the scripts directory, where data/ and model/ live.
+# Construct output paths even when their directories do not exist yet.
 for section in ['files', 'directories']:
-    if section in config_data:
-        for key, path in config_data[section].items():
-            if isinstance(path, str) and path.startswith('./'):
-                config_data[section][key] = find_path(path.lstrip('./'), search_root=search_root, search_type='any')
+    for key, path in config_data.get(section, {}).items():
+        if isinstance(path, str) and path.startswith('./'):
+            config_data[section][key] = str(script_dir / path[2:])
 
+for key in ['prediction_json_dir', 'prediction_output_dir']:
+    output_dir = config_data['directories'][key]
+    if output_dir:
+        Path(output_dir).mkdir(parents=True, exist_ok=True)
 
 name_train                  = config_data['datasets']['train_dataset_name']
 name_test                   = config_data['datasets']['test_dataset_name']
