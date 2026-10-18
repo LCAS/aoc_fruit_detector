@@ -67,6 +67,9 @@ scripts/**/bag/*
 
 
 # Andy added for ROSCon
+scripts/**/training_output/**
+!scripts/**/training_output/**/
+!scripts/**/training_output/**/*.png
 !scripts/data/bag/.gitkeep
 !scripts/data/bag/README.md
 scripts/data/documentation/*
