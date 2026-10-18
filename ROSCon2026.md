@@ -107,10 +107,12 @@ python scripts/train_strawberry.py
 
 The `fruit_detection.py` that is called via the launch file (see above) is configured with the new model details just trained in `src/config/non_ros_params.yaml`:
 
-```JSON
- model_file: '/home/ros/fruit_detector_ws/src/scripts/data/training_output/strawberry_ripeness/model_best.pth'
-  test_metadata_catalog_file: '/home/ros/fruit_detector_ws/src/scripts/data/training_output/strawberry_ripeness/test_metadata_catalog.pkl'
-  config_file: 'COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml'
+```
+model_file: '/home/ros/fruit_detector_ws/src/scripts/data/training_output/strawberry_ripeness/model_best.pth'
+
+test_metadata_catalog_file: '/home/ros/fruit_detector_ws/src/scripts/data/training_output/strawberry_ripeness/test_metadata_catalog.pkl'
+
+config_file: 'COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml'
 ```
 
 Run as above by building, sourcing and then launching.
