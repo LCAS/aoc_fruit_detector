@@ -79,4 +79,7 @@ https://github.com/user-attachments/assets/b451f84f-ce7e-4e2a-a872-478c98d1e271
 
 ## Training a model
 
+Training a model will involve downloading the [aoc_strawberry_dataset](https://lncn.ac/aocfruitds) zip file and extracting into the `scripts/data` folder.
+
+
 <img width="320" alt="loss_curve" src="https://github.com/user-attachments/assets/0a0774fb-dd7d-4b91-982d-3a268e79770f" />
