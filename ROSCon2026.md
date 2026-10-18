@@ -76,3 +76,7 @@ ros2 launch aoc_fruit_detector fruit_detection_with_bag.launch.py
 At this point it will be working if you can see:
 
 https://github.com/user-attachments/assets/b451f84f-ce7e-4e2a-a872-478c98d1e271
+
+## Training a model
+
+<img width="1500" height="900" alt="loss_curve" src="https://github.com/user-attachments/assets/0a0774fb-dd7d-4b91-982d-3a268e79770f" />
