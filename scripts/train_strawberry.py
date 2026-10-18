@@ -211,6 +211,8 @@ def main():
     trainer = DetectronTrainer(config)
     # These run-specific settings belong here; shared trainer classes stay intact.
     cfg = trainer.cfg
+    cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"Training device: {cfg.MODEL.DEVICE}")
     cfg.OUTPUT_DIR = str(output)
     cfg.DATALOADER.NUM_WORKERS = config["training"]["num_workers"]
     cfg.SOLVER.IMS_PER_BATCH = config["training"]["batch_size"]

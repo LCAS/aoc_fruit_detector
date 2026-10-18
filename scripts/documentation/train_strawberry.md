@@ -13,7 +13,7 @@ The script adds training/validation loss plots and selects `model_best.pth` usin
 - Python packages: `torch`, `numpy`, `matplotlib`, `PyYAML`.
 - Standard library: `json`, `os`, `pathlib`, `contextlib`.
 
-Matplotlib uses the non-interactive `Agg` backend, so graph generation does not require a desktop display. The pretrained model must be cached or downloadable. Device selection is inherited from the trainer configuration; this script does not implement automatic CPU fallback.
+Matplotlib uses the non-interactive `Agg` backend, so graph generation does not require a desktop display. The pretrained model must be cached or downloadable. The script selects CUDA when `torch.cuda.is_available()` is true and otherwise falls back to CPU, printing the selected device before constructing the training model. CPU training is substantially slower.
 
 ## Running
 
