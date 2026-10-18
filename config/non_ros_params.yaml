@@ -16,14 +16,14 @@ files:
   
   # Default
   # model_file: './model/aoc_tomato_ripeness_151_40k.pth'
-  #model_file: './model/aoc_strawberry_class_ripeness.pth' #'./model/aoc_model.pth'
-  #config_file: 'COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml'
-  #test_metadata_catalog_file: '/home/ros/fruit_detector_ws/src/dataset_catalogs/test_metadata_catalog.pkl'
+  model_file: './model/aoc_strawberry_class_ripeness.pth' #'./model/aoc_model.pth'
+  config_file: 'COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml'
+  test_metadata_catalog_file: '/home/ros/fruit_detector_ws/src/dataset_catalogs/test_metadata_catalog.pkl'
   
   # After training
-  model_file: '/home/ros/fruit_detector_ws/src/scripts/data/training_output/strawberry_ripeness/model_best.pth'
-  test_metadata_catalog_file: '/home/ros/fruit_detector_ws/src/scripts/data/training_output/strawberry_ripeness/test_metadata_catalog.pkl'
-  config_file: 'COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml'
+  #model_file: '/home/ros/fruit_detector_ws/src/scripts/data/training_output/strawberry_ripeness/model_best.pth'
+  #test_metadata_catalog_file: '/home/ros/fruit_detector_ws/src/scripts/data/training_output/strawberry_ripeness/test_metadata_catalog.pkl'
+  #config_file: 'COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml'
 
   train_dataset_catalog_file: './data/dataset_catalogs/train_dataset_catalog.pkl'
   train_annotation_file: './data/tomato_dataset/train/annotations/ripeness_class_annotations.json'

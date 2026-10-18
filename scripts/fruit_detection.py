@@ -430,17 +430,18 @@ class FruitDetectionNode(Node):
 
     def image_callback(self, msg, depth_msg):
         try:
-            self.get_logger().info("Image captured.")
+            self.get_logger().debug("Image captured.")
 
-            self.tf_matrix = self.get_optic_tf()
+            if self.pose3d_tf:
+                self.tf_matrix = self.get_optic_tf()
 
             # Convert ROS Image message to OpenCV image
             self.cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
-            self.get_logger().info("RGB ready.")
+            self.get_logger().debug("RGB ready.")
             
             # Create image_id as an integer using the timestamp
             image_id = int(f'{msg.header.stamp.sec}{str(msg.header.stamp.nanosec).zfill(9)}')
-            self.get_logger().info(f"Image ID is: {image_id}")
+            self.get_logger().debug(f"Image ID is: {image_id}")
 
             rgb_msg = msg
             # Use only the depth message paired by capture timestamp.
@@ -456,12 +457,12 @@ class FruitDetectionNode(Node):
                     interpolation=cv2.INTER_NEAREST,
                 )
 
-            self.get_logger().info("Depth ready")
-            # Combine RGB and depth into a single 4-channel image (3 for RGB + 1 for depth)
-            rgbd_image = np.dstack((self.cv_image, depth_image))
-            self.get_logger().info("RGBD ready")
-            
-            json_annotation_message, _, rgb_masks, depth_mask = self.det_predictor.get_predictions_message(rgbd_image, image_id, self.fruit_type)
+            self.get_logger().debug("Depth ready")
+            # The lightweight path returns the same annotations without drawing
+            # an unused overlay or extracting unused colour/depth masks.
+            json_annotation_message = self.det_predictor.get_predictions_message_short(
+                self.cv_image, image_id, self.fruit_type
+            )
 
             #info = json_annotation_message.get('info', [])
             #licenses = json_annotation_message.get('licenses', [])
@@ -577,7 +578,7 @@ class FruitDetectionNode(Node):
             if self.pub_markers:
                 self.publish_fruit_markers(fruits_msg)
             self.publisher_fruit.publish(fruits_msg)
-            self.get_logger().info("Published")
+            self.get_logger().debug("Published")
         except CvBridgeError as e:
             self.get_logger().error(f'CvBridge Error: {e}')
         except Exception as e:
@@ -639,7 +640,7 @@ class FruitDetectionNode(Node):
                     text_position, 
                     cv2.FONT_HERSHEY_SIMPLEX, 
                     font_scale, 
-                    (255, 0, 0),  # blue text
+                    (255, 255, 255),  # white text
                     thickness=font_thickness, 
                     lineType=cv2.LINE_AA
                 )

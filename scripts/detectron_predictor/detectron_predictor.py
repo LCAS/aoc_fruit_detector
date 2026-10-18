@@ -77,6 +77,7 @@ class DetectronPredictor(LearnerPredictor):
 
         cfg.MODEL.WEIGHTS = os.path.join(self.model_file)
         cfg.MODEL.ROI_HEADS.NUM_CLASSES = self.num_classes
+        #cfg.MODEL.DEVICE = "cpu"
         return cfg
 
 
