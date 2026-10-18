@@ -103,16 +103,24 @@ python scripts/train_strawberry.py
 
 <img width="320" alt="loss_curve" src="https://github.com/user-attachments/assets/0a0774fb-dd7d-4b91-982d-3a268e79770f" />
 
-### Detect
+### Inference / detection
 
 The `fruit_detection.py` that is called via the launch file (see above) is configured with the new model details just trained in `src/config/non_ros_params.yaml`:
 
+**model_file:** `'/home/ros/fruit_detector_ws/src/scripts/data/training_output/strawberry_ripeness/model_best.pth'`
+
+**test_metadata_catalog_file:** `'/home/ros/fruit_detector_ws/src/scripts/data/training_output/strawberry_ripeness/test_metadata_catalog.pkl'`
+
+**config_file:** `'COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml'`
+
+```bash
+cd ~/fruit_detector_ws/src
+colcon build
+source install/setup.bash
 ```
-model_file: '/home/ros/fruit_detector_ws/src/scripts/data/training_output/strawberry_ripeness/model_best.pth'
 
-test_metadata_catalog_file: '/home/ros/fruit_detector_ws/src/scripts/data/training_output/strawberry_ripeness/test_metadata_catalog.pkl'
+Then to run:
 
-config_file: 'COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml'
+```bash
+ros2 launch aoc_fruit_detector fruit_detection_with_bag.launch.py
 ```
-
-Run as above by building, sourcing and then launching.
