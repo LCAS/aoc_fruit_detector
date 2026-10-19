@@ -92,7 +92,7 @@ def generate_launch_description():
     bag_player = ExecuteProcess(
         cmd=[
             'ros2', 'bag', 'play',
-            os.path.join(package_share_directory, 'data', 'bag', 'camera'),
+            os.path.join(package_share_directory, 'data', 'fruit_detector', 'bag', 'camera'),
         ],
         output='screen',
     )

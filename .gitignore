@@ -67,6 +67,8 @@ scripts/**/bag/*
 
 
 # Andy added for ROSCon
+scripts/data/download
+scripts/data/fruit_detector/
 scripts/**/training_output/**
 !scripts/**/training_output/**/
 !scripts/**/training_output/**/*.png

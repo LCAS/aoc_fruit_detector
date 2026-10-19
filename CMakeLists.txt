@@ -37,7 +37,7 @@ install(DIRECTORY
   DESTINATION lib/${PROJECT_NAME}
 )
 
-foreach (dir launch config scripts/data scripts/model)
+foreach (dir launch config scripts/data)
     install(DIRECTORY ${dir} DESTINATION share/${PROJECT_NAME})
 endforeach(dir)
 

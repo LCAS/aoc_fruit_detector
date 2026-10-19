@@ -27,9 +27,17 @@ Once the prerequisites are installed / satisifed:
     git clone --branch ROSCon --single-branch https://github.com/LCAS/aoc_fruit_detector.git
     ```
 
-This creates an `aoc_fruit_detector` folder on the host. Open that folder in VS Code.
+2. This creates an `aoc_fruit_detector` folder on the host. Go into the main scripts folder and run the dataset download script:
 
-2. **Build and open the development container:**
+    ```
+    cd aoc_fruit_detector/scripts
+    ./download_and_extract.sh
+    ```
+
+    Open the `aoc_fruit_detector` folder in VS Code.
+
+
+3. **Build and open the development container:**
 
     The Dev Containers extension may prompt you to **Reopen in Container** when it detects `.devcontainer/devcontainer.json`. If it does not, use the Command Palette (`Ctrl+Shift+P`) and run **Dev Containers: Reopen in Container**. VS Code then builds and starts the container. The repository is mounted inside it at `/home/ros/fruit_detector_ws/src`; the ROS workspace and build environment are inside the container.
 
@@ -37,7 +45,7 @@ This creates an `aoc_fruit_detector` folder on the host. Open that folder in VS 
 
     <span style="color: red;">Any errors I suggest asking chatGPT / other LLM. It is most likely your docker installation.</span>
 
-3. **Access the desktop interface (optional):**
+4. **Access the desktop interface (optional):**
 
     *Optional, but without it you will not see any visualisations. Such as Rviz.*
 
