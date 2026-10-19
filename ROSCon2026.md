@@ -27,7 +27,7 @@ Once the prerequisites are installed / satisifed:
     git clone --branch ROSCon --single-branch https://github.com/LCAS/aoc_fruit_detector.git
     ```
 
-2. This creates an `aoc_fruit_detector` folder on the host. Go into the main scripts folder and run the dataset download script:
+2. This creates an `aoc_fruit_detector` folder on the host. Go into the main scripts folder and run the dataset download script (which will take some time as there is a large amount of data to download):
 
     ```
     cd aoc_fruit_detector/scripts
