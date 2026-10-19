@@ -31,7 +31,7 @@ Once the prerequisites are installed / satisifed:
 
     ```
     cd aoc_fruit_detector/scripts
-    ./download_and_extract.sh
+    ./download_and_extract_data.sh
     ```
 
     Open the `aoc_fruit_detector` folder in VS Code.
