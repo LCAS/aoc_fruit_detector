@@ -17,8 +17,13 @@
 	//"workspaceFolder": "/home/ros/fruit_detector_ws/",  // Path to the workspace within the container
 
 	// Forward specific ports from the container to the host machine
-	"forwardPorts": [5801],  // Port for remote desktop access
+	"forwardPorts": [5801, 6006],  // Port for remote desktop access
 	"portsAttributes": {
+		"6006": {
+			"label": "TensorBoard",
+			"onAutoForward": "notify",
+			"requireLocalPort": true
+		},
 		"5801": {
 			"label": "desktop",
 			"onAutoForward": "openBrowser"  // Automatically opens the desktop view in a browser
@@ -57,7 +62,10 @@
 	
 	// Initialize command to set up networking
 	"initializeCommand": "echo 'Setting up devcontainer...'",
-	"postStartCommand": "/opt/entrypoint.sh /bin/true; ./src/.devcontainer/scripts/post-create.sh",  // Run post-create script to set up the environment
+	"postStartCommand": {
+		"workspaceSetup": "/opt/entrypoint.sh /bin/true; ./src/.devcontainer/scripts/post-create.sh",
+		"tensorboard": "bash ./src/.devcontainer/scripts/start-tensorboard.sh"
+	},  // Run post-create script to set up the environment
 
 	// VS Code customizations: Install specific extensions on container startup
 	"customizations": {
