@@ -59,6 +59,7 @@ Once the prerequisites are installed / satisifed:
     ```
     https://localhost:6006
     ```
+    You may have to click `connect` in the NoVNC window.
 
 ### Running
 
