@@ -90,13 +90,9 @@ https://github.com/user-attachments/assets/b451f84f-ce7e-4e2a-a872-478c98d1e271
 
 ## Training a model
 
-### Download
-
-1. Training a model will involve downloading the [aoc_strawberry_dataset](https://lncn.ac/aocfruitds) zip file and extracting into the `scripts/data` folder.
-
 ### Config 
 
-2. The `train_strawberry.py` script needs to be aware of the dataset:
+1. The `train_strawberry.py` script needs to be aware of the dataset:
     ```
     dataset = root / "data/fruit_detector/Datasets/strawberry"
     output = root / "data/training_output/strawberry_ripeness"
@@ -108,7 +104,7 @@ When the training script is run the training graphs can be viewed using `http://
 
 The output files including the model weights will be saved in `scripts/data/training_output`.
 
-3. The script is run independent of ROS
+2. The script is run independent of ROS
     ```
     python scripts/train_strawberry.py 
     ```
