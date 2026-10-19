@@ -98,8 +98,8 @@ https://github.com/user-attachments/assets/b451f84f-ce7e-4e2a-a872-478c98d1e271
 
 2. The `train_strawberry.py` script needs to be aware of the dataset:
     ```
-        dataset = root / "data/strawberry"
-        output = root / "data/training_output/strawberry_ripeness"
+    dataset = root / "data/fruit_detector/Datasets/strawberry"
+    output = root / "data/training_output/strawberry_ripeness"
     ```
 
 ### Run
