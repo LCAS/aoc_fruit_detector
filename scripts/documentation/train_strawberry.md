@@ -29,10 +29,10 @@ Training starts with `resume_or_load(resume=False)`: it loads the configured COC
 
 ## Dataset layout and preparation
 
-Expected layout under `src/scripts/`:
+Expected layout under `src/scripts/data/fruit_detector/Datasets/`:
 
 ```text
-data/strawberry/
+strawberry/
 ├── train/
 │   ├── annotations/ripeness_class_annotations.json
 │   └── <images referenced by the annotations>

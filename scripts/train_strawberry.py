@@ -170,7 +170,7 @@ def training_directory(output):
 
 def main():
     root = Path(__file__).resolve().parent
-    dataset = root / "data/strawberry"
+    dataset = root / "data/fruit_detector/Datasets/strawberry"
     output = root / "data/training_output/strawberry_ripeness"
     output.mkdir(parents=True, exist_ok=True)
 
