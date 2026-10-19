@@ -13,7 +13,7 @@ Workshop contact email: [Andy Perrett](mailto:APerrett@students.lincoln.ac.uk?su
 
 ### Prerequisites to take part
 
-Exploring the AOC Fruit detector repository requires [docker](https://docs.docker.com/get-docker/), the [VS Code IDE](https://code.visualstudio.com/Download), the dev container [extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers), and [Git](https://git-scm.com/install/) to be installed on your host laptop or PC. In the workshop, we will use a Linux laptop.
+Exploring the AOC Fruit detector repository requires [docker](https://docs.docker.com/get-docker/), the [VS Code IDE](https://code.visualstudio.com/Download), the dev container [extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers), and [Git](https://git-scm.com/install/) to be installed on your host laptop or PC. In the workshop, we will use a Linux laptop. You will need a fair bit of storage space as Docker and the dataset take up a large amount of room.
 
 <span style="color: red;">**A GPU is advised but not essential.</span>** Running without a GPU will ***severely slow everything down*** though. Plus you will need to remove the `runtime: nvidia` from within docker-compose.yml file which is inside the .devcontainer. Do this immediately after the `git clone` below and before you open the container within VS Code.
 
@@ -33,6 +33,8 @@ Once the prerequisites are installed / satisifed:
     cd aoc_fruit_detector/scripts
     ./download_and_extract_data.sh
     ```
+
+    At this stage if the download is successful and has extracted the files with no error then the `download` file in the `scripts/data` folder can be deleted (9GB).
 
     Open the `aoc_fruit_detector` folder in VS Code.
 
