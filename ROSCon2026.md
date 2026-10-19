@@ -57,13 +57,13 @@ Once the prerequisites are installed / satisifed:
     ```
     Training graphs can be found at:
     ```
-    https://localhost:6006
+    http://localhost:6006
     ```
     You may have to click `connect` in the NoVNC window.
 
 ### Running
 
-Run the following to view published topics/saved annotations detected by `aoc_fruit_detector` package. This will also start Rviz in the web browser desktop view:
+Run the following to view published topics/saved annotations detected by `aoc_fruit_detector` package. You may need to start a new terminal. This will also start Rviz in the web browser desktop view:
 
 1. You want to be inside the container (in VS Code terminal or web browser desktop view terminal):
 
