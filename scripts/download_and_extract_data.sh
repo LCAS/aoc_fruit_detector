@@ -11,7 +11,8 @@ if [[ ! -d "$DATA_DIR/fruit_detector" ]]; then
     mkdir -p "$DATA_DIR"
 
     if [[ ! -s "$ARCHIVE" ]]; then
-        curl --fail --location --show-error --silent "$URL" --output "$ARCHIVE"
+        echo "This may take a few minutes..."
+        curl --fail --location --show-error --progress-bar "$URL" --output "$ARCHIVE"
     else
         echo "Archive already downloaded; skipping download."
     fi
