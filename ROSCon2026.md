@@ -1,5 +1,7 @@
 # ROSCon 2026
 
+<span style="color: red;">**A critical bug has been found in PHP. The Universities Tech Dept has taken down all our resources that are affected. This is a current news story that you may be aware of (https://www.wiz.io/blog/php2shell-php-rce). This will affect the downloading of the dataset below. We are working on a work around.</span>
+
 ## ROS in the Field: Building Open Agri-Food Robotics Together
 
 A hands-on session showcasing selected Agri-OpenCore components. Participants will be able to explore Dockerised examples and learn how reusable components can be incorporated into their own ROS-based systems.
